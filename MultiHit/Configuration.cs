@@ -2,7 +2,7 @@
 using Dalamud.Plugin;
 using System;
 
-namespace SamplePlugin
+namespace MultiHit
 {
     [Serializable]
     public class Configuration : IPluginConfiguration

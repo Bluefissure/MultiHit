@@ -1,13 +1,9 @@
 {
-  "Author": "your name here",
-  "Name": "Sample Plugin",
+  "Author": "Bluefissure",
+  "Name": "MultiHit",
   "Punchline": "A short one-liner that shows up in /xlplugins.",
   "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
-  "InternalName": "samplePlugin",
+  "InternalName": "MultiHit",
   "ApplicableVersion": "any",
-  "Tags": [
-    "sample",
-    "plugin",
-    "goats"
-  ]
+  "Tags": []
 }
