@@ -17,18 +17,15 @@ using Dalamud.Data;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.ClientState.Objects;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Numerics;
 using System.Collections.Generic;
-using FFXIVClientStructs.Interop;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using Dalamud.Game.Gui;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Text;
 using FFXIVClientStructs.FFXIV.Component.Excel;
 using Lumina.Excel;
+using System.Linq;
 
 namespace MultiHit
 {
@@ -50,7 +47,10 @@ namespace MultiHit
         private readonly GameGui _gameGui;
 
         private readonly ExcelSheet<Action> _actionSheet;
-        private int _lastAnimationId = -1;
+        public readonly List<Action> actionList;
+        private HashSet<string> _validActionName;
+        private Dictionary<string, List<MultiHit>> _multiHitMap;
+        private string _lastAnimationName = "undefined";
 
         private delegate void AddScreenLogDelegate(
                 Character* target,
@@ -82,12 +82,6 @@ namespace MultiHit
         private delegate void ReceiveActionEffectDelegate(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail);
         private readonly Hook<ReceiveActionEffectDelegate> _receiveActionEffectHook;
 
-        private delegate void WhatEverFuncDelegate(nint a1, nint a2, nint a3, uint a4, int a5, uint a6, nint a7, int a8, char a9);
-        private readonly Hook<WhatEverFuncDelegate> _whatEverFuncHook;
-
-        private delegate nint WhatEverFunc2Delegate(nint a1, nint a2, nint a3, nint a4, nint a5);
-        private readonly Hook<WhatEverFunc2Delegate> _whatEverFunc2Hook;
-
 
 
         public Plugin(
@@ -108,6 +102,7 @@ namespace MultiHit
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
+            this.updateAffectedAction();
 
             ConfigWindow = new ConfigWindow(this);
             MainWindow = new MainWindow(this);
@@ -127,16 +122,17 @@ namespace MultiHit
                 if (_actionSheet == null)
                     throw new NullReferenceException();
 
+                actionList = new();
+                foreach(var action in _actionSheet.Where(act => act.IsPlayerAction))
+                {
+                    actionList.Add(action);
+                }
+
                 var receiveActionEffectFuncPtr = scanner.ScanText("4C 89 44 24 ?? 55 56 41 54 41 55 41 56");
                 _receiveActionEffectHook = Hook<ReceiveActionEffectDelegate>.FromAddress(receiveActionEffectFuncPtr, ReceiveActionEffect);
 
                 var addScreenLogPtr = scanner.ScanText("E8 ?? ?? ?? ?? BF ?? ?? ?? ?? 41 F6 87");
                 _addScreenLogHook = Hook<AddScreenLogDelegate>.FromAddress(addScreenLogPtr, AddScreenLogDetour);
-
-                var whatEverFuncPtr = scanner.ScanText("E8 ?? ?? ?? ?? 48 FF C7 48 83 FF 08 0F 8C ?? ?? ?? ?? 4C 8B 7C 24 ??");
-                _whatEverFuncHook = Hook<WhatEverFuncDelegate>.FromAddress(whatEverFuncPtr, WhatEverFuncDetour);
-                var whatEverFunc2Ptr = scanner.ScanText("E8 ?? ?? ?? ?? 80 7E 21 00");
-                _whatEverFunc2Hook = Hook<WhatEverFunc2Delegate>.FromAddress(whatEverFunc2Ptr, WhatEverFunc2Detour);
 
                 var flyTextAddress = new FlyTextGuiAddressResolver();
                 flyTextAddress.Setup(scanner);
@@ -154,16 +150,10 @@ namespace MultiHit
                 _addFlyTextHook?.Dispose();
                 _receiveActionEffectHook?.Disable();
                 _receiveActionEffectHook?.Dispose();
-                _whatEverFuncHook?.Disable();
-                _whatEverFuncHook?.Dispose();
-                _whatEverFunc2Hook?.Disable();
-                _whatEverFunc2Hook?.Dispose();
 
                 throw;
             }
 
-            _whatEverFuncHook?.Enable();
-            _whatEverFunc2Hook?.Enable();
             _receiveActionEffectHook?.Enable();
             _addScreenLogHook.Enable();
             _addFlyTextHook.Enable();
@@ -174,33 +164,6 @@ namespace MultiHit
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         }
 
-        private void WhatEverFuncDetour(nint a1, nint a2, nint a3, uint a4, int a5, uint a6, nint a7, int a8, char a9)
-        {
-            try
-            {
-                //PluginLog.Information($"[WhatEver] a1:{a1:X} a2:{a2:X} a3:{a3:X} a4:{a4} a5:{a5} a6:{a6} a7:{a7:X} a8:{a8} a9:{(int)a9}");
-            }
-            catch (Exception e)
-            {
-                PluginLog.Error(e, "An error occurred in MultiHit.");
-            }
-            _whatEverFuncHook.Original(a1, a2, a3, a4, a5, a6, a7, a8, a9);
-        }
-
-
-        private nint WhatEverFunc2Detour(nint a1, nint a2, nint a3, nint a4, nint a5)
-        {
-            try
-            {
-                byte v3_33 = Marshal.ReadByte(a3 + 33);
-                //PluginLog.Information($"[WhatEver] a1:{a1:X} a2:{a2:X} a3:{a3:X} v3_33:{v3_33} a4:{a4:X} a5:{a5:X}");
-            }
-            catch (Exception e)
-            {
-                PluginLog.Error(e, "An error occurred in MultiHit.");
-            }
-            return _whatEverFunc2Hook.Original(a1, a2, a3, a4, a5);
-        }
         private void AddScreenLogDetour(
                 Character* target,
                 Character* source,
@@ -214,6 +177,7 @@ namespace MultiHit
                 int val4
             )
         {
+            /*
             try
             {
                 var targetId = target->GameObject.ObjectID;
@@ -232,6 +196,7 @@ namespace MultiHit
             {
                 PluginLog.Error(e, "An error occurred in MultiHit.");
             }
+            */
 
             _addScreenLogHook.Original(target, source, logKind, option, actionKind, actionId, val1, val2, serverAttackType, val4);
         }
@@ -251,13 +216,17 @@ namespace MultiHit
             try
             {
                 // Known valid flytext region within the atk arrays
-                var strIndex = 27;
-                var numIndex = 30;
+                // patch 6.3
+                // var strIndex = 27;
+                // var numIndex = 30;
+                // patch 6.2
+                var strIndex = 25;
+                var numIndex = 28;
                 var atkArrayDataHolder = ((UIModule*)_gameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
                 DebugLog(FlyText, $"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
                 try
                 {
-                    var strArray = atkArrayDataHolder.GetStringArrayData(strIndex);
+                    var strArray = atkArrayDataHolder._StringArrays[strIndex];
                     var flyText1Ptr = strArray->StringArray[offsetStr];
                     if (flyText1Ptr == null || (nint)flyText1Ptr == IntPtr.Zero)
                     {
@@ -279,43 +248,47 @@ namespace MultiHit
                     var flyText2Ptr = strArray->StringArray[offsetStr + 1];
                     var flyText2Len = GetStrLenFromPtr(flyText2Ptr);
                     string text2 = Encoding.UTF8.GetString(flyText2Ptr, flyText2Len).Trim();
-                    var numArray = atkArrayDataHolder.GetNumberArrayData(numIndex);
+                    var numArray = atkArrayDataHolder._NumberArrays[numIndex];
                     int kind = numArray->IntArray[offsetNum + 1];
                     int val1 = numArray->IntArray[offsetNum + 2];
                     int val2 = numArray->IntArray[offsetNum + 3];
                     int damageTypeIcon = numArray->IntArray[offsetNum + 4];
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
-                    //_ftGui.AddFlyText(ftKind, targetIdx, (uint)ftVal1, (uint)ftVal2, "[MultiHit]" + ftText1, ftText2, ftColor, ftIcon, ftDamageTypeIcon);
-                    DebugLog(FlyText, $"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{color} icon:{icon} damageTypeIcon:{damageTypeIcon}");
-                    if (text1 == "Brutal Shell" || text1 == "Demon Slice" || text1 == "Prominence")
+                    DebugLog(FlyText, $"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{color} icon:{icon}");
+                    if (_validActionName.Contains(text1))
                     {
-                        int num_hits = 5;
-                        int left_val = val1;
-                        for (int i = 0; i < num_hits; i++)
+                        _multiHitMap.TryGetValue(text2, out var multiHitList);
+                        if (multiHitList != null)
                         {
-                            int tmp_val = (i == num_hits - 1) ? left_val : val1 / num_hits;
-                            left_val -= tmp_val;
-                            int tmp_i = i + 1;
-                            Task.Delay(1000 * 70 / 30 / num_hits * i + 1000 / 30 * 10).ContinueWith(_ =>
+                            int num_hits = multiHitList.Count;
+                            int left_val = val1;
+                            int temp_i = 0;
+                            foreach (var mulHit in multiHitList)
                             {
-                                try
+                                temp_i += 1;
+                                int temp_val = (int)(val1 * mulHit.percent);
+                                left_val -= temp_val;
+                                int delay = 1000 * mulHit.time / 30;
+                                Task.Delay(delay).ContinueWith(_ =>
                                 {
-                                    int animationId = (int)_actionSheet.GetRow(16139).AnimationEnd.Row;
-                                    if (animationId != _lastAnimationId)
+                                    try
                                     {
-                                        return;
+                                        if (text1 != _lastAnimationName)
+                                        {
+                                            return;
+                                        }
+                                        lock (this)
+                                        {
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)temp_val, (uint)val2, text1, $"Hit#{temp_i}", (uint)color, (uint)icon);
+                                        }
                                     }
-                                    lock (this)
+                                    catch (Exception e)
                                     {
-                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tmp_val, (uint)val2, text1, $"Hit#{tmp_i}", (uint)color, (uint)icon, (uint)damageTypeIcon);
+                                        DebugLog(FlyText, $"An error has occurred in MultiHit AddFlyText");
                                     }
-                                }
-                                catch (Exception e)
-                                {
-                                    DebugLog(FlyText, $"An error has occurred in MultiHit AddFlyText");
-                                }
-                            });
+                                });
+                            }
                         }
                         return;
                     }
@@ -342,6 +315,34 @@ namespace MultiHit
                 unknown);
         }
 
+        private void updateAffectedAction()
+        {
+            return;
+            /*
+            var validActionName = new HashSet<string>();
+            var multiHitMap = new Dictionary<string, List<MultiHit>>();
+            foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
+            {
+                foreach (var act in actionList.Where(a => a.enabled))
+                {
+                    var action = _actionSheet.GetRow((uint)act.actionKey);
+                    if (action == null)
+                    {
+                        continue;
+                    }
+                    string actionName = action.Name;
+                    if (!validActionName.Contains(actionName))
+                    {
+                        validActionName.Add(actionName);
+                    }
+                    multiHitMap[action.Name] = act.hitList;
+                }
+            }
+            _validActionName = validActionName;
+            _multiHitMap = multiHitMap;
+            */
+        }
+
         private void ReceiveActionEffect(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail)
         {
             try
@@ -349,7 +350,7 @@ namespace MultiHit
                 int animationId = (int)_actionSheet.GetRow(effectHeader->ActionId).AnimationEnd.Row;
                 if(animationId != -1)
                 {
-                    _lastAnimationId = animationId;
+                    _lastAnimationName = _actionSheet.GetRow(effectHeader->ActionId).Name;
                 }
                 DebugLog(Effect, $"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
             }
@@ -369,12 +370,12 @@ namespace MultiHit
                 ref SeString text2,
                 ref uint color,
                 ref uint icon,
-                ref uint damageTypeIcon,
                 ref float yOffset,
                 ref bool handled
             )
         {
             return;
+            /*
             try
             {
                 var ftKind = kind;
@@ -419,6 +420,7 @@ namespace MultiHit
             {
                 PluginLog.Error(e, "An error has occurred in MultiHit");
             }
+            */
         }
 
         public void Dispose()
@@ -431,10 +433,6 @@ namespace MultiHit
             _addFlyTextHook?.Dispose();
             _receiveActionEffectHook?.Disable();
             _receiveActionEffectHook?.Dispose();
-            _whatEverFuncHook?.Disable();
-            _whatEverFuncHook?.Dispose();
-            _whatEverFunc2Hook?.Disable();
-            _whatEverFunc2Hook?.Dispose();
 
             this.WindowSystem.RemoveAllWindows();
             
@@ -447,8 +445,8 @@ namespace MultiHit
 
         private void OnCommand(string command, string args)
         {
-            // in response to the slash command, just display our main ui
-            MainWindow.IsOpen = true;
+            //MainWindow.IsOpen = true;
+            ConfigWindow.IsOpen = true;
         }
 
         private void DrawUI()
@@ -490,7 +488,7 @@ namespace MultiHit
             }
             return 0;
         }
-        private void DebugLog(LogType type, string str)
+        internal void DebugLog(LogType type, string str)
         {
             PluginLog.Information($"[{type}] {str}");
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Dalamud.Game.Gui.FlyText;
@@ -122,4 +123,48 @@ public struct ActionEffectInfo
     }
 
     public override string ToString() => $"{nameof(step)}: {step}, {nameof(tick)}: {tick}, {nameof(actionId)}: {actionId}, {nameof(type)}: {type}, {nameof(damageType)}: {damageType}, {nameof(kind)}: {kind}, {nameof(sourceId)}: {sourceId}, {nameof(targetId)}: {targetId}, {nameof(value)}: {value}, {nameof(positionalState)}: {positionalState}";
+}
+
+public struct MultiHit
+{
+    public int time;  // 30 for 1 second
+    public double percent;
+    public MultiHit(int time, double percent) : this()
+    {
+        this.time = time;
+        this.percent = percent;
+    }
+}
+
+
+public struct ActionMultiHit
+{
+    public int actionKey;
+    public string actionName;  // note this may be different in different language
+    public bool enabled;
+    public List<MultiHit> hitList;
+    public ActionMultiHit(int actionKey, string actionName = "", bool enabled = true, List<MultiHit>? hitList = null) : this()
+    {
+        this.actionKey = actionKey;
+        this.actionName = actionName;
+        this.enabled = enabled;
+        this.hitList = hitList ?? new();
+    }
+
+    public override string ToString() => $"{actionName}#{actionKey}";
+}
+
+
+public struct ActionGroup
+{
+    public string name;
+    public bool enabled;
+    public List<ActionMultiHit> actionList;
+
+    public ActionGroup(string name, bool enabled = true, List<ActionMultiHit>? actionList = null) : this()
+    {
+        this.name = name;
+        this.enabled = enabled;
+        this.actionList = actionList ?? new();
+    }
 }

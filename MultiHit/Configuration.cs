@@ -1,6 +1,7 @@
-﻿using Dalamud.Configuration;
+using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
+using System.Collections.Generic;
 
 namespace MultiHit
 {
@@ -9,11 +10,11 @@ namespace MultiHit
     {
         public int Version { get; set; } = 0;
 
-        public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
-
-        // the below exist just to make saving less cumbersome
         [NonSerialized]
         private DalamudPluginInterface? PluginInterface;
+
+        public bool Enabled = true;
+        public List<ActionGroup> actionGroups = new();
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
