@@ -49,7 +49,7 @@ namespace MultiHit
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
         private HashSet<string> _validActionName;
-        private Dictionary<string, List<MultiHit>> _multiHitMap;
+        private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
 
         private delegate void AddScreenLogDelegate(
@@ -102,7 +102,6 @@ namespace MultiHit
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
-            this.updateAffectedAction();
 
             ConfigWindow = new ConfigWindow(this);
             MainWindow = new MainWindow(this);
@@ -121,6 +120,8 @@ namespace MultiHit
 
                 if (_actionSheet == null)
                     throw new NullReferenceException();
+
+                this.updateAffectedAction();
 
                 actionList = new();
                 foreach(var action in _actionSheet.Where(act => act.IsPlayerAction))
@@ -217,11 +218,11 @@ namespace MultiHit
             {
                 // Known valid flytext region within the atk arrays
                 // patch 6.3
-                // var strIndex = 27;
-                // var numIndex = 30;
+                var strIndex = 27;
+                var numIndex = 30;
                 // patch 6.2
-                var strIndex = 25;
-                var numIndex = 28;
+                // var strIndex = 25;
+                // var numIndex = 28;
                 var atkArrayDataHolder = ((UIModule*)_gameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
                 DebugLog(FlyText, $"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
                 try
@@ -252,21 +253,30 @@ namespace MultiHit
                     int kind = numArray->IntArray[offsetNum + 1];
                     int val1 = numArray->IntArray[offsetNum + 2];
                     int val2 = numArray->IntArray[offsetNum + 3];
+                    // patch 6.3
+                    /*
                     int damageTypeIcon = numArray->IntArray[offsetNum + 4];
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
+                    */
+                    // patch 6.2
+                    int color = numArray->IntArray[offsetNum + 5];
+                    int icon = numArray->IntArray[offsetNum + 6];
                     DebugLog(FlyText, $"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{color} icon:{icon}");
                     if (_validActionName.Contains(text1))
                     {
-                        _multiHitMap.TryGetValue(text2, out var multiHitList);
+                        _multiHitMap.TryGetValue(text1, out var multiHitList);
                         if (multiHitList != null)
                         {
+                            PluginLog.Information("MultiHitList");
+                            PluginLog.Information(string.Join(", ", multiHitList.ToArray()));
                             int num_hits = multiHitList.Count;
                             int left_val = val1;
-                            int temp_i = 0;
+                            int tempIdx = 0;
                             foreach (var mulHit in multiHitList)
                             {
-                                temp_i += 1;
+                                tempIdx += 1;
+                                int hitIdx = tempIdx;
                                 int temp_val = (int)(val1 * mulHit.percent);
                                 left_val -= temp_val;
                                 int delay = 1000 * mulHit.time / 30;
@@ -280,7 +290,7 @@ namespace MultiHit
                                         }
                                         lock (this)
                                         {
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)temp_val, (uint)val2, text1, $"Hit#{temp_i}", (uint)color, (uint)icon);
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)temp_val, (uint)val2, text1, $"Hit#{hitIdx}", (uint)color, (uint)icon);
                                         }
                                     }
                                     catch (Exception e)
@@ -315,12 +325,10 @@ namespace MultiHit
                 unknown);
         }
 
-        private void updateAffectedAction()
+        internal void updateAffectedAction()
         {
-            return;
-            /*
             var validActionName = new HashSet<string>();
-            var multiHitMap = new Dictionary<string, List<MultiHit>>();
+            var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
                 foreach (var act in actionList.Where(a => a.enabled))
@@ -339,8 +347,9 @@ namespace MultiHit
                 }
             }
             _validActionName = validActionName;
+            PluginLog.Information(string.Join(", ", _validActionName.ToArray()));
             _multiHitMap = multiHitMap;
-            */
+            PluginLog.Information(string.Join(", ", _multiHitMap.ToArray()));
         }
 
         private void ReceiveActionEffect(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail)

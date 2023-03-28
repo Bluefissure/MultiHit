@@ -11,6 +11,9 @@ namespace MultiHit
         public int Version { get; set; } = 0;
 
         [NonSerialized]
+        internal bool changed = false;
+
+        [NonSerialized]
         private DalamudPluginInterface? PluginInterface;
 
         public bool Enabled = true;
@@ -23,7 +26,13 @@ namespace MultiHit
 
         public void Save()
         {
+            this.changed = true;
             this.PluginInterface!.SavePluginConfig(this);
+        }
+
+        public void ApplyChange()
+        {
+            this.changed = false;
         }
     }
 }

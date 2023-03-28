@@ -125,11 +125,17 @@ public struct ActionEffectInfo
     public override string ToString() => $"{nameof(step)}: {step}, {nameof(tick)}: {tick}, {nameof(actionId)}: {actionId}, {nameof(type)}: {type}, {nameof(damageType)}: {damageType}, {nameof(kind)}: {kind}, {nameof(sourceId)}: {sourceId}, {nameof(targetId)}: {targetId}, {nameof(value)}: {value}, {nameof(positionalState)}: {positionalState}";
 }
 
-public struct MultiHit
+public class Ref<T> where T : struct
+{
+    public T Value { get; set; }
+}
+
+
+public struct Hit
 {
     public int time;  // 30 for 1 second
     public double percent;
-    public MultiHit(int time, double percent) : this()
+    public Hit(int time = 0, double percent = 0) : this()
     {
         this.time = time;
         this.percent = percent;
@@ -139,15 +145,17 @@ public struct MultiHit
 
 public struct ActionMultiHit
 {
-    public int actionKey;
+    public int actionKey = -1;
     public string actionName;  // note this may be different in different language
     public bool enabled;
-    public List<MultiHit> hitList;
-    public ActionMultiHit(int actionKey, string actionName = "", bool enabled = true, List<MultiHit>? hitList = null) : this()
+    public bool interruptable;
+    public List<Hit> hitList;
+    public ActionMultiHit(int actionKey, string actionName = "", bool enabled = true, bool interruptable = true, List<Hit>? hitList = null) : this()
     {
         this.actionKey = actionKey;
         this.actionName = actionName;
         this.enabled = enabled;
+        this.interruptable = interruptable;
         this.hitList = hitList ?? new();
     }
 
