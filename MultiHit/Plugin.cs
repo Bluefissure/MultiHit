@@ -49,6 +49,7 @@ namespace MultiHit
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
         private HashSet<string> _validActionName;
+        private HashSet<string> _interruptableActionName;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
 
@@ -271,20 +272,18 @@ namespace MultiHit
                             PluginLog.Information("MultiHitList");
                             PluginLog.Information(string.Join(", ", multiHitList.ToArray()));
                             int num_hits = multiHitList.Count;
-                            int left_val = val1;
                             int tempIdx = 0;
                             foreach (var mulHit in multiHitList)
                             {
                                 tempIdx += 1;
                                 int hitIdx = tempIdx;
-                                int temp_val = (int)(val1 * mulHit.percent);
-                                left_val -= temp_val;
+                                int temp_val = (int)(val1 * (mulHit.percent * 1.0f / 100f));
                                 int delay = 1000 * mulHit.time / 30;
                                 Task.Delay(delay).ContinueWith(_ =>
                                 {
                                     try
                                     {
-                                        if (text1 != _lastAnimationName)
+                                        if (text1 != _lastAnimationName && _interruptableActionName.Contains(text1))
                                         {
                                             return;
                                         }
@@ -328,6 +327,7 @@ namespace MultiHit
         internal void updateAffectedAction()
         {
             var validActionName = new HashSet<string>();
+            var interruptableActionName = new HashSet<string>();
             var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
@@ -343,13 +343,16 @@ namespace MultiHit
                     {
                         validActionName.Add(actionName);
                     }
+                    if (act.interruptable && !interruptableActionName.Contains(actionName))
+                    {
+                        interruptableActionName.Add(actionName);
+                    }
                     multiHitMap[action.Name] = act.hitList;
                 }
             }
             _validActionName = validActionName;
-            PluginLog.Information(string.Join(", ", _validActionName.ToArray()));
+            _interruptableActionName = interruptableActionName;
             _multiHitMap = multiHitMap;
-            PluginLog.Information(string.Join(", ", _multiHitMap.ToArray()));
         }
 
         private void ReceiveActionEffect(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail)

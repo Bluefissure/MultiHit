@@ -134,8 +134,8 @@ public class Ref<T> where T : struct
 public struct Hit
 {
     public int time;  // 30 for 1 second
-    public double percent;
-    public Hit(int time = 0, double percent = 0) : this()
+    public int percent;  // percentage %
+    public Hit(int time = 0, int percent = 0) : this()
     {
         this.time = time;
         this.percent = percent;

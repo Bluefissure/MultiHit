@@ -280,14 +280,14 @@ public class ConfigWindow : Window, IDisposable
                 ref var hit = ref hitList[hitIdx];
                 ImGui.Text($"Hit {hitIdx + 1, 3}: ");
                 ImGui.SameLine();
-                int pct = (int)(hit.percent * 100);
+                int pct = hit.percent;
                 ImGui.Text("Percentage: "); ImGui.SameLine();
                 ImGui.SetNextItemWidth(200);
                 if (ImGui.InputInt($"##PercentageHit_{hitIdx}", ref pct, 1, 5))
                 {
                     pct = Math.Min(pct, 100);
                     pct = Math.Max(pct, 0);
-                    hit.percent = pct / 100f;
+                    hit.percent = pct;
                     Configuration.Save();
                 }
                 ImGui.SameLine();
