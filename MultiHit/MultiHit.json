@@ -1,9 +1,9 @@
 {
-  "Author": "Bluefissure",
-  "Name": "MultiHit",
-  "Punchline": "Split flytext into multiple.",
-  "Description": "Papa asked me to do this so here it is.",
-  "InternalName": "MultiHit",
-  "ApplicableVersion": "any",
-  "Tags": []
+    "Author": "Bluefissure",
+    "Name": "MultiHit",
+    "Punchline": "Split flytext into multiple flytext.",
+    "Description": "Papa asked me for this so here it is.",
+    "InternalName": "MultiHit",
+    "ApplicableVersion": "any",
+    "Tags": []
 }
