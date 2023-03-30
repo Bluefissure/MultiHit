@@ -2,7 +2,8 @@
     {
         "Author": "Bluefissure, Papachin",
         "Name": "MultiHit",
-        "Description": "Flytext splitter.",
+        "Punchline": "Split flytext into multiple hits.",
+        "Description": "Papa asked me for this so here it is.",
         "InternalName": "MultiHit",
         "AssemblyVersion": "0.0.0.1",
         "TestingAssemblyVersion": "0.0.0.1",
