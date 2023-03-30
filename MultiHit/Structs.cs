@@ -149,14 +149,25 @@ public struct ActionMultiHit
     public string actionName;  // note this may be different in different language
     public bool enabled;
     public bool interruptable;
+    public bool showHit = true;
     public List<Hit> hitList;
-    public ActionMultiHit(int actionKey, string actionName = "", bool enabled = true, bool interruptable = true, List<Hit>? hitList = null) : this()
+    public Hit finalHit;
+    public ActionMultiHit(
+        int actionKey,
+        string actionName = "",
+        bool enabled = true,
+        bool interruptable = true,
+        bool showHit = true,
+        List<Hit>? hitList = null,
+        Hit? finalHit = null) : this()
     {
         this.actionKey = actionKey;
         this.actionName = actionName;
         this.enabled = enabled;
         this.interruptable = interruptable;
+        this.showHit = showHit;
         this.hitList = hitList ?? new();
+        this.finalHit = finalHit ?? new(30, 100);
     }
 
     public override string ToString() => $"{actionName}#{actionKey}";

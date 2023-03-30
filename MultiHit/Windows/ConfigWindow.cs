@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
+using Dalamud.Interface;
 using Dalamud.Interface.Colors;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
 using ImPlotNET;
+using Newtonsoft.Json;
 
 namespace MultiHit.Windows;
 
@@ -20,6 +24,10 @@ public class ConfigWindow : Window, IDisposable
     private string addActionFilterText = "";
     private int selectedGroupIdx = -1;
     private int selectedActionIdx = -1;
+
+    private readonly FileDialogManager _dialogManager = SetupFileManager();
+    private bool _dialogOpen;
+    private string _lastExportDirectory = ".";
 
     public ConfigWindow(Plugin plugin) : base(
         "MultiHit Configuration Window")
@@ -40,8 +48,57 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
         ImGui.SameLine();
-        ImGui.SetCursorPosX(ImGui.GetContentRegionAvail().X - 50);
-        if(Configuration.changed && ImGui.Button("Apply Changes"))
+        if (ImGui.Button("Export"))
+        {
+            if (_dialogOpen)
+            {
+                _dialogManager.Reset();
+                _dialogOpen = false;
+            }
+            else
+            {
+                // Use the current input as start directory if it exists,
+                // otherwise the current mod directory, otherwise the current application directory.
+                var startDir = _lastExportDirectory ?? ".";
+
+                _dialogManager.OpenFolderDialog("Export", (b, s) =>
+                {
+                    Plugin.ExportGroups(s);
+                    _lastExportDirectory = s;
+                    _dialogOpen = false;
+                }, startDir);
+                _dialogOpen = true;
+            }
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("Import"))
+        {
+            if (_dialogOpen)
+            {
+                _dialogManager.Reset();
+                _dialogOpen = false;
+            }
+            else
+            {
+                // Use the current input as start directory if it exists,
+                // otherwise the current mod directory, otherwise the current application directory.
+                var startDir = ".";
+
+                _dialogManager.OpenFileDialog("Import", ".json", (b, strs) =>
+                {
+                    foreach (var s in strs)
+                    {
+                        Plugin.ImportGroup(s);
+                    }
+                    _dialogOpen = false;
+                }, 10, startDir);
+                _dialogOpen = true;
+            }
+        }
+        ImGui.SameLine();
+        var applyText = "Apply Changes";
+        ImGui.SetCursorPosX(ImGui.GetContentRegionMax().X - ImGui.CalcTextSize(applyText).X - 10);
+        if(Configuration.changed && ImGui.Button(applyText))
         {
             Plugin.updateAffectedAction();
             Configuration.ApplyChange();
@@ -60,10 +117,13 @@ public class ConfigWindow : Window, IDisposable
                 new Vector2((float)(ImGui.GetContentRegionMax().X * 0.68), (float)(ImGui.GetContentRegionAvail().Y * 0.98)),
                 true
             ))
+
         {
             this.DrawDetail();
             ImGui.EndChild();
         }
+
+        _dialogManager.Draw();
     }
     public void DrawGroup()
     {
@@ -100,7 +160,6 @@ public class ConfigWindow : Window, IDisposable
                             {
                                 if (ImGui.Selectable(action.Name + $"##Action{action.RowId}"))
                                 {
-                                    PluginLog.Information($"{action.Name} #{action.RowId}");
                                     group.actionList.Add(new ActionMultiHit((int)action.RowId, action.Name));
                                     Configuration.Save();
                                     ImGui.CloseCurrentPopup();
@@ -131,7 +190,7 @@ public class ConfigWindow : Window, IDisposable
                     if (ImGui.Selectable("Delete Group"))
                     {
                         groupToDeleteIdx = groupIdx;
-                        PluginLog.Information($"To delete group#{groupIdx}");
+                        PluginLog.Debug($"To delete group#{groupIdx}");
 
                     }
                     ImGui.EndPopup();
@@ -139,51 +198,54 @@ public class ConfigWindow : Window, IDisposable
                 if (open)
                 {
                     var actionToDeleteIdx = -1;
-                    var actionList = CollectionsMarshal.AsSpan(group.actionList);
-                    for (int actionIdx = 0; actionIdx < group.actionList.Count; actionIdx++)
+                    if (group.actionList != null)
                     {
-                        ref var action = ref actionList[actionIdx];
-                        if (!action.enabled)
+                        var actionList = CollectionsMarshal.AsSpan(group.actionList);
+                        for (int actionIdx = 0; actionIdx < group.actionList.Count; actionIdx++)
                         {
-                            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
-                        }
-                        var actionOpen = ImGui.Selectable(action.ToString(), selectedGroupIdx == groupIdx && selectedActionIdx == actionIdx);
-                        if (!action.enabled)
-                        {
-                            ImGui.PopStyleColor();
-                        }
-                        if (ImGui.BeginPopupContextItem())
-                        {
-                            if (ImGui.Selectable("Enable Action"))
+                            ref var action = ref actionList[actionIdx];
+                            if (!action.enabled)
                             {
-                                action.enabled = true;
-                                Configuration.Save();
+                                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
                             }
-                            if (ImGui.Selectable("Disable Action"))
+                            var actionOpen = ImGui.Selectable(action.ToString(), selectedGroupIdx == groupIdx && selectedActionIdx == actionIdx);
+                            if (!action.enabled)
                             {
-                                action.enabled = false;
-                                Configuration.Save();
+                                ImGui.PopStyleColor();
                             }
-                            if (ImGui.Selectable("Delete Action"))
+                            if (ImGui.BeginPopupContextItem())
                             {
-                                actionToDeleteIdx = actionIdx;
-                                PluginLog.Information($"To delete action {action}");
+                                if (ImGui.Selectable("Enable Action"))
+                                {
+                                    action.enabled = true;
+                                    Configuration.Save();
+                                }
+                                if (ImGui.Selectable("Disable Action"))
+                                {
+                                    action.enabled = false;
+                                    Configuration.Save();
+                                }
+                                if (ImGui.Selectable("Delete Action"))
+                                {
+                                    actionToDeleteIdx = actionIdx;
+                                    PluginLog.Debug($"To delete action {action}");
+                                }
+                                ImGui.EndPopup();
                             }
-                            ImGui.EndPopup();
+                            if (actionOpen)
+                            {
+                                PluginLog.Debug($"Selecting {action}");
+                                selectedGroupIdx = groupIdx;
+                                selectedActionIdx = actionIdx;
+                            }
                         }
-                        if (actionOpen)
+                        if (actionToDeleteIdx != -1)
                         {
-                            PluginLog.Debug($"Selecting {action}");
-                            selectedGroupIdx = groupIdx;
-                            selectedActionIdx = actionIdx;
+                            group.actionList.RemoveAt(actionToDeleteIdx);
+                            selectedGroupIdx = -1;
+                            selectedActionIdx = -1;
+                            Configuration.Save();
                         }
-                    }
-                    if (actionToDeleteIdx != -1)
-                    {
-                        group.actionList.RemoveAt(actionToDeleteIdx);
-                        selectedGroupIdx = -1;
-                        selectedActionIdx = -1;
-                        Configuration.Save();
                     }
                     ImGui.TreePop();
                 }
@@ -253,16 +315,25 @@ public class ConfigWindow : Window, IDisposable
         {
             Configuration.Save();
         }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Whether other animation can interrupte the upcoming flytext.");
+        }
+        ImGui.SameLine();
+        if (ImGui.Checkbox("Show Hit", ref action.showHit))
+        {
+            Configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Whether to show the Hit#i in flytext.");
+        }
         if (ImGui.Button("Add Hit"))
         {
             if (action.hitList.Count < 100)
             {
                 action.hitList.Add(new Hit());
                 Configuration.Save();
-            }
-            else
-            {
-
             }
         }
         ImGui.SameLine();
@@ -271,7 +342,9 @@ public class ConfigWindow : Window, IDisposable
             action.hitList.Clear();
             Configuration.Save();
         }
-        if (ImGui.BeginChild("detailActionList", ImGui.GetContentRegionAvail(), false))
+        if (ImGui.BeginChild("detailActionList", 
+            new Vector2(ImGui.GetContentRegionAvail().X, ImGui.GetContentRegionAvail().Y * 0.8f)
+            , false))
         {
             var hitList = CollectionsMarshal.AsSpan(action.hitList);
             int hitIdxToDelete = -1;
@@ -314,6 +387,18 @@ public class ConfigWindow : Window, IDisposable
             }
             ImGui.EndChild();
         }
+    }
+    public static FileDialogManager SetupFileManager()
+    {
+        var fileManager = new FileDialogManager
+        {
+            AddedWindowFlags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoDocking,
+        };
 
+        // Remove Videos and Music.
+        fileManager.CustomSideBarItems.Add(("Videos", string.Empty, 0, -1));
+        fileManager.CustomSideBarItems.Add(("Music", string.Empty, 0, -1));
+
+        return fileManager;
     }
 }

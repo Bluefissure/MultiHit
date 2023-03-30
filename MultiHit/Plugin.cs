@@ -1,7 +1,6 @@
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
 using Dalamud.Interface.Windowing;
 using MultiHit.Windows;
 using Dalamud.Game;
@@ -12,20 +11,19 @@ using static MultiHit.LogType;
 using Action = Lumina.Excel.GeneratedSheets.Action;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 using Dalamud.Logging;
-using ImGuiNET;
 using Dalamud.Data;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.ClientState.Objects;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Dalamud.Game.Gui;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Text;
-using FFXIVClientStructs.FFXIV.Component.Excel;
 using Lumina.Excel;
 using System.Linq;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace MultiHit
 {
@@ -50,8 +48,10 @@ namespace MultiHit
         public readonly List<Action> actionList;
         private HashSet<string> _validActionName;
         private HashSet<string> _interruptableActionName;
+        private HashSet<string> _showHitActionName;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
+        private HashSet<int> _ignoreKinds = new HashSet<int>() { 18, 31};
 
         private delegate void AddScreenLogDelegate(
                 Character* target,
@@ -225,7 +225,7 @@ namespace MultiHit
                 // var strIndex = 25;
                 // var numIndex = 28;
                 var atkArrayDataHolder = ((UIModule*)_gameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
-                DebugLog(FlyText, $"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
+                PluginLog.Debug($"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
                 try
                 {
                     var strArray = atkArrayDataHolder._StringArrays[strIndex];
@@ -263,21 +263,26 @@ namespace MultiHit
                     // patch 6.2
                     int color = numArray->IntArray[offsetNum + 5];
                     int icon = numArray->IntArray[offsetNum + 6];
-                    DebugLog(FlyText, $"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{color} icon:{icon}");
-                    if (_validActionName.Contains(text1))
+
+                    if (_validActionName.Contains(text1) && !_ignoreKinds.Contains(kind))
                     {
+                        PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color} icon:{icon}");
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
                         if (multiHitList != null)
                         {
                             PluginLog.Information("MultiHitList");
                             PluginLog.Information(string.Join(", ", multiHitList.ToArray()));
-                            int num_hits = multiHitList.Count;
                             int tempIdx = 0;
                             foreach (var mulHit in multiHitList)
                             {
                                 tempIdx += 1;
                                 int hitIdx = tempIdx;
-                                int temp_val = (int)(val1 * (mulHit.percent * 1.0f / 100f));
+                                string tempText2 = _showHitActionName.Contains(text1) ? $"Hit#{hitIdx}" : text2;
+                                if (tempText2.Equals(String.Empty))
+                                {
+                                    tempText2 = "\0";
+                                }
+                                int tempVal = (int)(val1 * (mulHit.percent * 1.0f / 100f));
                                 int delay = 1000 * mulHit.time / 30;
                                 Task.Delay(delay).ContinueWith(_ =>
                                 {
@@ -289,12 +294,12 @@ namespace MultiHit
                                         }
                                         lock (this)
                                         {
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)temp_val, (uint)val2, text1, $"Hit#{hitIdx}", (uint)color, (uint)icon);
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, text1, tempText2, (uint)color, (uint)icon);
                                         }
                                     }
                                     catch (Exception e)
                                     {
-                                        DebugLog(FlyText, $"An error has occurred in MultiHit AddFlyText");
+                                        PluginLog.Debug($"An error has occurred in MultiHit AddFlyText");
                                     }
                                 });
                             }
@@ -328,6 +333,7 @@ namespace MultiHit
         {
             var validActionName = new HashSet<string>();
             var interruptableActionName = new HashSet<string>();
+            var showHitActionName = new HashSet<string>();
             var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
@@ -347,11 +353,16 @@ namespace MultiHit
                     {
                         interruptableActionName.Add(actionName);
                     }
+                    if (act.showHit && !showHitActionName.Contains(actionName))
+                    {
+                        showHitActionName.Add(actionName);
+                    }
                     multiHitMap[action.Name] = act.hitList;
                 }
             }
             _validActionName = validActionName;
             _interruptableActionName = interruptableActionName;
+            _showHitActionName = showHitActionName;
             _multiHitMap = multiHitMap;
         }
 
@@ -364,7 +375,7 @@ namespace MultiHit
                 {
                     _lastAnimationName = _actionSheet.GetRow(effectHeader->ActionId).Name;
                 }
-                DebugLog(Effect, $"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
+                PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
             }
             catch (Exception e)
             {
@@ -372,6 +383,44 @@ namespace MultiHit
             }
 
             _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
+        }
+
+        internal void ExportGroups(string path)
+        {
+            try
+            {
+                DirectoryInfo d = new(path);
+                foreach (var group in Configuration.actionGroups)
+                {
+                    var jsonStr = JsonConvert.SerializeObject(group);
+                    var fileName = Path.Combine(d.FullName, group.name.Replace(' ', '_') + ".json");
+                    File.WriteAllText(fileName, jsonStr);
+                }
+                PluginLog.Information($"Export {Configuration.actionGroups.Count} groups into {path}.");
+            }
+            catch (Exception e)
+            {
+                PluginLog.Error(e, $"An error has occurred while exporting to {path}.");
+            }
+        }
+        internal void ImportGroup(string filename)
+        {
+            try
+            {
+                var jsonStr = File.ReadAllText(filename);
+                var group = JsonConvert.DeserializeObject<ActionGroup>(jsonStr);
+                if (group.name == null || group.actionList == null)
+                {
+                    return;
+                }
+                Configuration.actionGroups.Add(group);
+                Configuration.Save();
+                PluginLog.Information($"Imported group {group.name}.");
+            }
+            catch (Exception e)
+            {
+                PluginLog.Error(e, $"An error has occurred while importing from {filename}.");
+            }
         }
 
         private void OnFlyTextCreated(
@@ -499,10 +548,6 @@ namespace MultiHit
                 }
             }
             return 0;
-        }
-        internal void DebugLog(LogType type, string str)
-        {
-            PluginLog.Information($"[{type}] {str}");
         }
     }
 }
