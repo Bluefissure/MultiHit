@@ -1,0 +1,21 @@
+[
+    {
+        "Author": "Bluefissure, Papachin",
+        "Name": "MultiHit",
+        "Description": "Flytext splitter.",
+        "InternalName": "MultiHit",
+        "AssemblyVersion": "0.0.0.1",
+        "TestingAssemblyVersion": "0.0.0.1",
+        "RepoUrl": "https://github.com/Bluefissure/MultiHit",
+        "ApplicableVersion": "any",
+        "DalamudApiLevel": 7,
+        "IsHide": "False",
+        "IsTestingExclusive": "False",
+        "DownloadCount": 0,
+        "LastUpdate": 0,
+        "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.1/latest.zip",
+        "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.1/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.1/latest.zip",
+        "IconUrl": "https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/images/icon.png"
+    }
+]
