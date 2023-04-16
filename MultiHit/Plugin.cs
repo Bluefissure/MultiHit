@@ -287,7 +287,7 @@ namespace MultiHit
                     {
                         PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
-                        int totalTime = 0;
+                        int maxTime = 0;
                         if (multiHitList != null)
                         {
                             int tempIdx = 0;
@@ -301,7 +301,7 @@ namespace MultiHit
                                     tempText2 = "\0";
                                 }
                                 int tempVal = (int)(val1 * (mulHit.percent * 1.0f / 100f));
-                                totalTime += mulHit.time;
+                                maxTime = Math.Max(maxTime, mulHit.time);
                                 uint tempColor = mulHit.color;
                                 PluginLog.Debug($"{mulHit}.color: {mulHit.color:X}");
                                 if ((tempColor & 0xFF) == 0) // if alpha is 0 then use the original color
@@ -344,7 +344,8 @@ namespace MultiHit
                             }
                             int finalDelay = 0;
                             _finalDelay.TryGetValue(text1, out finalDelay);
-                            int delay = 1000 * (totalTime + finalDelay) / 30;
+                            // PluginLog.Debug($"maxTime:{maxTime} finalDelay:{finalDelay}");
+                            int delay = 1000 * (maxTime + finalDelay) / 30;
                             Task.Delay(delay).ContinueWith(_ =>
                             {
                                 try
