@@ -47,8 +47,9 @@ namespace MultiHit
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
         private HashSet<string> _validActionName;
-        private HashSet<string> _interruptableActionName;
+        private HashSet<string> _interruptibleActionName;
         private HashSet<string> _showHitActionName;
+        private HashSet<string> _showFinalActionName;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
         private HashSet<int> _ignoreKinds = new HashSet<int>() { 18, 31};
@@ -125,7 +126,9 @@ namespace MultiHit
                 this.updateAffectedAction();
 
                 actionList = new();
-                foreach(var action in _actionSheet.Where(act => act.IsPlayerAction))
+                foreach(var action in _actionSheet.Where(act => act.IsPlayerAction || act.IsPvP || (
+                    act.UnlockLink > 0 && (act.CanTargetHostile || act.CanTargetFriendly)
+                )))
                 {
                     actionList.Add(action);
                 }
@@ -215,6 +218,21 @@ namespace MultiHit
             uint offsetStrMax,
             int unknown)
         {
+            if (!Configuration.Enabled)
+            {
+                _addFlyTextHook.Original(
+                    addonFlyText,
+                    actorIndex,
+                    messageMax,
+                    numbers,
+                    offsetNum,
+                    offsetNumMax,
+                    strings,
+                    offsetStr,
+                    offsetStrMax,
+                    unknown);
+                return;
+            }
             try
             {
                 // Known valid flytext region within the atk arrays
@@ -266,12 +284,11 @@ namespace MultiHit
 
                     if (_validActionName.Contains(text1) && !_ignoreKinds.Contains(kind))
                     {
-                        PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color} icon:{icon}");
+                        PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
+                        int totalTime = 0;
                         if (multiHitList != null)
                         {
-                            PluginLog.Information("MultiHitList");
-                            PluginLog.Information(string.Join(", ", multiHitList.ToArray()));
                             int tempIdx = 0;
                             foreach (var mulHit in multiHitList)
                             {
@@ -283,18 +300,31 @@ namespace MultiHit
                                     tempText2 = "\0";
                                 }
                                 int tempVal = (int)(val1 * (mulHit.percent * 1.0f / 100f));
+                                totalTime += mulHit.time;
+                                uint tempColor = mulHit.color;
+                                PluginLog.Debug($"{mulHit}.color: {mulHit.color:X}");
+                                if ((tempColor & 0xFF) == 0) // if alpha is 0 then use the original color
+                                {
+                                    tempColor = (uint)color;
+                                }
+                                else
+                                {
+                                    byte[] bytes = BitConverter.GetBytes(tempColor);
+                                    Array.Reverse(bytes, 0, bytes.Length);
+                                    tempColor = BitConverter.ToUInt32(bytes, 0);
+                                }
                                 int delay = 1000 * mulHit.time / 30;
                                 Task.Delay(delay).ContinueWith(_ =>
                                 {
                                     try
                                     {
-                                        if (text1 != _lastAnimationName && _interruptableActionName.Contains(text1))
+                                        if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
                                         {
                                             return;
                                         }
                                         lock (this)
                                         {
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, text1, tempText2, (uint)color, (uint)icon);
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, text1, tempText2, tempColor, (uint)icon);
                                         }
                                     }
                                     catch (Exception e)
@@ -303,6 +333,34 @@ namespace MultiHit
                                     }
                                 });
                             }
+                        }
+                        if (multiHitList == null || _showFinalActionName.Contains(text1))
+                        {
+                            string tempText2 = text2;
+                            if (tempText2.Equals(String.Empty))
+                            {
+                                tempText2 = "\0";
+                            }
+                            int delay = 1000 * (totalTime + 1) / 30;
+                            Task.Delay(delay).ContinueWith(_ =>
+                            {
+                                try
+                                {
+                                    if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
+                                    {
+                                        return;
+                                    }
+                                    lock (this)
+                                    {
+                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, text1, tempText2, (uint)color, (uint)icon);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    PluginLog.Debug($"An error has occurred in MultiHit AddFlyText");
+                                }
+                            });
+
                         }
                         return;
                     }
@@ -332,8 +390,9 @@ namespace MultiHit
         internal void updateAffectedAction()
         {
             var validActionName = new HashSet<string>();
-            var interruptableActionName = new HashSet<string>();
+            var interruptibleActionName = new HashSet<string>();
             var showHitActionName = new HashSet<string>();
+            var showFinalActionName = new HashSet<string>();
             var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
@@ -349,25 +408,35 @@ namespace MultiHit
                     {
                         validActionName.Add(actionName);
                     }
-                    if (act.interruptable && !interruptableActionName.Contains(actionName))
+                    if (act.interruptible && !interruptibleActionName.Contains(actionName))
                     {
-                        interruptableActionName.Add(actionName);
+                        interruptibleActionName.Add(actionName);
                     }
                     if (act.showHit && !showHitActionName.Contains(actionName))
                     {
                         showHitActionName.Add(actionName);
                     }
+                    if (act.showFinal && !showFinalActionName.Contains(actionName))
+                    {
+                        showFinalActionName.Add(actionName);
+                    }
                     multiHitMap[action.Name] = act.hitList;
                 }
             }
             _validActionName = validActionName;
-            _interruptableActionName = interruptableActionName;
+            _interruptibleActionName = interruptibleActionName;
             _showHitActionName = showHitActionName;
+            _showFinalActionName = showFinalActionName;
             _multiHitMap = multiHitMap;
         }
 
         private void ReceiveActionEffect(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail)
         {
+            if (!Configuration.Enabled)
+            {
+                _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
+                return;
+            }
             try
             {
                 int animationId = (int)_actionSheet.GetRow(effectHeader->ActionId).AnimationEnd.Row;

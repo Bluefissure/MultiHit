@@ -135,10 +135,12 @@ public struct Hit
 {
     public int time;  // 30 for 1 second
     public int percent;  // percentage %
-    public Hit(int time = 0, int percent = 0) : this()
+    public uint color = 0;  // percentage %
+    public Hit(int time = 0, int percent = 0, uint color = 0) : this()
     {
         this.time = time;
         this.percent = percent;
+        this.color = color;
     }
 }
 
@@ -148,24 +150,27 @@ public struct ActionMultiHit
     public int actionKey = -1;
     public string actionName;  // note this may be different in different language
     public bool enabled;
-    public bool interruptable;
+    public bool interruptible;
     public bool showHit = true;
+    public bool showFinal = false;
     public List<Hit> hitList;
     public Hit finalHit;
     public ActionMultiHit(
         int actionKey,
         string actionName = "",
         bool enabled = true,
-        bool interruptable = true,
+        bool interruptible = true,
         bool showHit = true,
+        bool showFinal = false,
         List<Hit>? hitList = null,
         Hit? finalHit = null) : this()
     {
         this.actionKey = actionKey;
         this.actionName = actionName;
         this.enabled = enabled;
-        this.interruptable = interruptable;
+        this.interruptible = interruptible;
         this.showHit = showHit;
+        this.showFinal = showFinal;
         this.hitList = hitList ?? new();
         this.finalHit = finalHit ?? new(30, 100);
     }

@@ -311,7 +311,7 @@ public class ConfigWindow : Window, IDisposable
         {
             Configuration.Save();
         }
-        if (ImGui.Checkbox("Interruptable", ref action.interruptable))
+        if (ImGui.Checkbox("Interruptible", ref action.interruptible))
         {
             Configuration.Save();
         }
@@ -327,6 +327,15 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip("Whether to show the Hit#i in flytext.");
+        }
+        ImGui.SameLine();
+        if (ImGui.Checkbox("Show Final", ref action.showFinal))
+        {
+            Configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Whether to show the original hit as final hit.");
         }
         if (ImGui.Button("Add Hit"))
         {
@@ -373,6 +382,27 @@ public class ConfigWindow : Window, IDisposable
                     delay = Math.Max(delay, 0);
                     hit.time = delay;
                     Configuration.Save();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("30 = 1 second");
+                }
+                ImGui.SameLine();
+                var uintCol = hit.color;
+                var R = uintCol >> 24;
+                var G = (uintCol >> 16) & 0xFF;
+                var B = (uintCol >> 8) & 0xFF;
+                var A = uintCol & 0xFF;
+                var col = new Vector4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+                if (ImGui.ColorEdit4($"ColorPicker##ColorPickerHit_{hitIdx}", ref col,
+                    ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.AlphaPreview | ImGuiColorEditFlags.AlphaBar))
+                {
+                    hit.color = ((uint)(col.X * 255.0) << 24) | ((uint)(col.Y * 255.0) << 16) | ((uint)(col.Z * 255.0) << 8) | (uint)(col.W * 255.0);
+                    Configuration.Save();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("Custom colors only work when alpha is not 0.");
                 }
                 ImGui.SameLine();
                 if (ImGui.Button($"Delete##DeleteHit_{hitIdx}"))
