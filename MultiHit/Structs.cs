@@ -153,6 +153,7 @@ public struct ActionMultiHit
     public bool interruptible;
     public bool showHit = true;
     public bool showFinal = false;
+    public int finalDelay = 0;
     public List<Hit> hitList;
     public Hit finalHit;
     public ActionMultiHit(
@@ -162,6 +163,7 @@ public struct ActionMultiHit
         bool interruptible = true,
         bool showHit = true,
         bool showFinal = false,
+        int finalDelay = 0,
         List<Hit>? hitList = null,
         Hit? finalHit = null) : this()
     {
@@ -171,6 +173,7 @@ public struct ActionMultiHit
         this.interruptible = interruptible;
         this.showHit = showHit;
         this.showFinal = showFinal;
+        this.finalDelay = finalDelay;
         this.hitList = hitList ?? new();
         this.finalHit = finalHit ?? new(30, 100);
     }

@@ -142,7 +142,10 @@ public class ConfigWindow : Window, IDisposable
                     ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
                 }
                 var open = ImGui.TreeNode(group.name + $"##Group{groupIdx}");
-
+                if (!group.enabled)
+                {
+                    ImGui.PopStyleColor();
+                }
                 if (ImGui.BeginPopupContextItem())
                 {
                     if (ImGui.BeginMenu("Add new action"))
@@ -204,12 +207,12 @@ public class ConfigWindow : Window, IDisposable
                         for (int actionIdx = 0; actionIdx < group.actionList.Count; actionIdx++)
                         {
                             ref var action = ref actionList[actionIdx];
-                            if (!action.enabled)
+                            if (!action.enabled || !group.enabled)
                             {
                                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudGrey);
                             }
                             var actionOpen = ImGui.Selectable(action.ToString(), selectedGroupIdx == groupIdx && selectedActionIdx == actionIdx);
-                            if (!action.enabled)
+                            if (!action.enabled || !group.enabled)
                             {
                                 ImGui.PopStyleColor();
                             }
@@ -248,12 +251,6 @@ public class ConfigWindow : Window, IDisposable
                         }
                     }
                     ImGui.TreePop();
-                }
-
-
-                if (!group.enabled)
-                {
-                    ImGui.PopStyleColor();
                 }
             }
             
@@ -336,6 +333,29 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip("Whether to show the original hit as final hit.");
+        }
+        if (action.showFinal)
+        {
+            int delay = (int)action.finalDelay;
+            ImGui.SameLine();
+            ImGui.Text("Delay: ");
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Delay the final hit (after the last hit).");
+            }
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(100);
+            if (ImGui.InputInt("##DelayHit_Final", ref delay, 1, 5))
+            {
+                delay = Math.Min(delay, 300);
+                delay = Math.Max(delay, 0);
+                action.finalDelay = delay;
+                Configuration.Save();
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("30 = 1 second");
+            }
         }
         if (ImGui.Button("Add Hit"))
         {

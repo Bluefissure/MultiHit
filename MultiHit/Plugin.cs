@@ -50,6 +50,7 @@ namespace MultiHit
         private HashSet<string> _interruptibleActionName;
         private HashSet<string> _showHitActionName;
         private HashSet<string> _showFinalActionName;
+        private Dictionary<string, int> _finalDelay;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
         private HashSet<int> _ignoreKinds = new HashSet<int>() { 18, 31};
@@ -341,7 +342,9 @@ namespace MultiHit
                             {
                                 tempText2 = "\0";
                             }
-                            int delay = 1000 * (totalTime + 1) / 30;
+                            int finalDelay = 0;
+                            _finalDelay.TryGetValue(text1, out finalDelay);
+                            int delay = 1000 * (totalTime + finalDelay) / 30;
                             Task.Delay(delay).ContinueWith(_ =>
                             {
                                 try
@@ -393,6 +396,7 @@ namespace MultiHit
             var interruptibleActionName = new HashSet<string>();
             var showHitActionName = new HashSet<string>();
             var showFinalActionName = new HashSet<string>();
+            var finalDelay = new Dictionary<string, int>();
             var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
@@ -420,6 +424,7 @@ namespace MultiHit
                     {
                         showFinalActionName.Add(actionName);
                     }
+                    finalDelay[action.Name] = act.finalDelay;
                     multiHitMap[action.Name] = act.hitList;
                 }
             }
@@ -427,6 +432,7 @@ namespace MultiHit
             _interruptibleActionName = interruptibleActionName;
             _showHitActionName = showHitActionName;
             _showFinalActionName = showFinalActionName;
+            _finalDelay = finalDelay;
             _multiHitMap = multiHitMap;
         }
 
@@ -482,6 +488,19 @@ namespace MultiHit
                 {
                     return;
                 }
+                var tempActionList = new List<ActionMultiHit>();
+                for (var i = 0; i < group.actionList.Count; i ++)
+                {
+                    var act = group.actionList[i];
+                    var action = _actionSheet.GetRow((uint)act.actionKey);
+                    if (action == null)
+                    {
+                        continue;
+                    }
+                    act.actionName = action.Name.ToString();
+                    tempActionList.Add(act);
+                }
+                group.actionList = tempActionList;
                 Configuration.actionGroups.Add(group);
                 Configuration.Save();
                 PluginLog.Information($"Imported group {group.name}.");
