@@ -190,11 +190,31 @@ public class ConfigWindow : Window, IDisposable
                         group.enabled = false;
                         Configuration.Save();
                     }
+                    if (ImGui.Selectable("Export Group"))
+                    {
+                        if (_dialogOpen)
+                        {
+                            _dialogManager.Reset();
+                            _dialogOpen = false;
+                        }
+                        else
+                        {
+                            var startDir = _lastExportDirectory ?? ".";
+                            var tempGroup = group;
+                            _dialogManager.OpenFolderDialog("Export", (b, s) =>
+                            {
+                                Plugin.ExportGroup(s, tempGroup);
+                                _lastExportDirectory = s;
+                                _dialogOpen = false;
+                            }, startDir);
+                            _dialogOpen = true;
+                        }
+                        PluginLog.Debug($"Exporting group#{groupIdx}");
+                    }
                     if (ImGui.Selectable("Delete Group"))
                     {
                         groupToDeleteIdx = groupIdx;
                         PluginLog.Debug($"To delete group#{groupIdx}");
-
                     }
                     ImGui.EndPopup();
                 }

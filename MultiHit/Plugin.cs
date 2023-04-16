@@ -479,6 +479,21 @@ namespace MultiHit
                 PluginLog.Error(e, $"An error has occurred while exporting to {path}.");
             }
         }
+        internal void ExportGroup(string path, ActionGroup group)
+        {
+            try
+            {
+                DirectoryInfo d = new(path);
+                var jsonStr = JsonConvert.SerializeObject(group);
+                var fileName = Path.Combine(d.FullName, group.name.Replace(' ', '_') + ".json");
+                File.WriteAllText(fileName, jsonStr);
+                PluginLog.Information($"Export 1 group into {path}.");
+            }
+            catch (Exception e)
+            {
+                PluginLog.Error(e, $"An error has occurred while exporting to {path}.");
+            }
+        }
         internal void ImportGroup(string filename)
         {
             try
