@@ -1,5 +1,7 @@
 # MultiHit
 
+[![GitHub all releases](https://img.shields.io/github/downloads/Bluefissure/MultiHit/total?color=green)](https://github.com/Bluefissure/MultiHit/releases)
+
 **Split the flytext of action damage into multiple.**
 
 Install by adding 3rd party repo:
