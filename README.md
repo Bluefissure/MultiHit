@@ -26,7 +26,7 @@ Same reason, if you have multiple multihits enabled for the same action, only on
 ### 3. Does it support different clients?
 It will. I use CN client for developing & testing latest features first (because of the subscription), and I'll make another repo for distributing it for Intl clients. 
 
-### 4. Since the game's actions and judgment are like dog poop, what's the point?
+### 4. Since the game's actions are like s**t, what's the point?
 Multhit aims to enhance the combat feedback for players who pursue a sense of hitting. Of course, this will inevitably sacrifice some practicality. If you don't care about these or care more about observing the exact damage value of each skill, then Multhit will be meaningless (for more user cases, please check the mods from [the one and only papachin](https://www.youtube.com/c/papapachin) for details).
 
 ### 5. My network latency is very high, and the effect is very poor after using this plugin...
