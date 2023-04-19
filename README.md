@@ -26,5 +26,25 @@ Same reason, if you have multiple multihits enabled for the same action, only on
 ### 3. Does it support different clients?
 It will. I use CN client for developing & testing latest features first (because of the subscription), and I'll make another repo for distributing it for Intl clients. 
 
-### 4. Does it make any sense since the game actions act like s**t?
-It makes little sense if you don't use any vfx mods for actions (check [the one and only papachin](https://www.youtube.com/c/papapachin) for details).
+### 4. Since the game's actions and judgment are like dog poop, what's the point?
+Multhit aims to enhance the combat feedback for players who pursue a sense of hitting. Of course, this will inevitably sacrifice some practicality. If you don't care about these or care more about observing the exact damage value of each skill, then Multhit will be meaningless (for more user cases, please check the mods from [the one and only papachin](https://www.youtube.com/c/papapachin) for details).
+
+### 5. My network latency is very high, and the effect is very poor after using this plugin...
+Multhit is not recommended for use in high network latency environments.
+
+### 6. Why is the appearance time of flytext and the delay I input for my own presets not consistent?
+The splitted flytext is triggered by the in-game ones, and there's always a delay for most actions, which is defined in the TMB files.
+In most cases, Multhit is best used with TMB modification. It is recommended to set the start time of flytext in TMB to 0 (3 for AOE skills).
+
+### 7. Why is there no effect after I make any modifications (including enabling/disabling presets, adding/deleting/modifying values)?
+Make sure to click "apply change" after modifying to apply the changes.
+
+### 8. Why did the flytext color not change even though I modified it?
+The colors only works when the alpha(transparency) is not 0. Please also modify the transparency value on the right bar when modifying the color.
+
+### 9. After I turned on the "Interrupt" option, the flytext of the skill was interrupted by the subsequent skill before it was fully displayed. Will I lose damage?
+As mentioned in 1, all modifications only affect your flytext display, so your actual damage will never change. In most cases, it is not recommended to enable the interruption option unless you have installed some VFX mods that can be interrupted (such as Papachin's NERO-GNB's Keen Edge series skills).
+
+### 10. What is the use of Finalhit?
+Finalhit can display the total damage of this attack after the last hit. If you want to visually see the real total damage of each skill, you can try it (it will also be interrupted if the interruption option is enabled).
+
