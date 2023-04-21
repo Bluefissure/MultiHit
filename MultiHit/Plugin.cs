@@ -51,6 +51,8 @@ namespace MultiHit
         private HashSet<string> _showHitActionName;
         private HashSet<string> _showFinalActionName;
         private Dictionary<string, int> _finalDelay;
+        private HashSet<string> _hasCustomActionName;
+        private Dictionary<string, string> _customName;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
         private HashSet<int> _ignoreKinds = new HashSet<int>() { 18, 31};
@@ -285,7 +287,17 @@ namespace MultiHit
 
                     if (_validActionName.Contains(text1) && !_ignoreKinds.Contains(kind))
                     {
-                        PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
+                        var shownActionName = text1;
+                        if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
+                        {
+                            var tempName = text1;
+                            _customName.TryGetValue(text1, out tempName);
+                            if(tempName != string.Empty)
+                            {
+                                shownActionName = tempName;
+                            }
+                        }
+                        PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} shownActionName:{shownActionName} text2:{text2} color:{(uint)color:X} icon:{icon}");
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
                         int maxTime = 0;
                         if (multiHitList != null)
@@ -325,7 +337,7 @@ namespace MultiHit
                                         }
                                         lock (this)
                                         {
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, text1, tempText2, tempColor, (uint)icon);
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon);
                                         }
                                     }
                                     catch (Exception e)
@@ -356,7 +368,7 @@ namespace MultiHit
                                     }
                                     lock (this)
                                     {
-                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, text1, tempText2, (uint)color, (uint)icon);
+                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon);
                                     }
                                 }
                                 catch (Exception e)
@@ -398,6 +410,8 @@ namespace MultiHit
             var showHitActionName = new HashSet<string>();
             var showFinalActionName = new HashSet<string>();
             var finalDelay = new Dictionary<string, int>();
+            var hasCustomActionName = new HashSet<string>();
+            var customName = new Dictionary<string, string>();
             var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
@@ -424,8 +438,13 @@ namespace MultiHit
                     if (act.showFinal && !showFinalActionName.Contains(actionName))
                     {
                         showFinalActionName.Add(actionName);
+                        finalDelay[action.Name] = act.finalDelay;
                     }
-                    finalDelay[action.Name] = act.finalDelay;
+                    if (act.hasCustomName && !hasCustomActionName.Contains(actionName))
+                    {
+                        hasCustomActionName.Add(actionName);
+                        customName[action.Name] = act.customName;
+                    }
                     multiHitMap[action.Name] = act.hitList;
                 }
             }
@@ -434,6 +453,8 @@ namespace MultiHit
             _showHitActionName = showHitActionName;
             _showFinalActionName = showFinalActionName;
             _finalDelay = finalDelay;
+            _hasCustomActionName = hasCustomActionName;
+            _customName = customName;
             _multiHitMap = multiHitMap;
         }
 

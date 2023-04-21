@@ -377,6 +377,24 @@ public class ConfigWindow : Window, IDisposable
                 ImGui.SetTooltip("30 = 1 second");
             }
         }
+        if (ImGui.Checkbox("Custom Name", ref action.hasCustomName))
+        {
+            Configuration.Save();
+        }
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Customize action names in flytext.");
+        }
+        if (action.hasCustomName)
+        {
+            ImGui.SameLine();
+            var name = action.customName ?? "";
+            if (ImGui.InputText("##CustomName", ref name, 32))
+            {
+                action.customName = name;
+                Configuration.Save();
+            }
+        }
         if (ImGui.Button("Add Hit"))
         {
             if (action.hitList.Count < 100)

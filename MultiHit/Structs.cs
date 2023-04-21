@@ -154,6 +154,8 @@ public struct ActionMultiHit
     public bool showHit = true;
     public bool showFinal = false;
     public int finalDelay = 0;
+    public bool hasCustomName = false;
+    public string customName = "";
     public List<Hit> hitList;
     public Hit finalHit;
     public ActionMultiHit(
@@ -164,6 +166,8 @@ public struct ActionMultiHit
         bool showHit = true,
         bool showFinal = false,
         int finalDelay = 0,
+        bool hasCustomName = false,
+        string customName = "",
         List<Hit>? hitList = null,
         Hit? finalHit = null) : this()
     {
@@ -174,6 +178,8 @@ public struct ActionMultiHit
         this.showHit = showHit;
         this.showFinal = showFinal;
         this.finalDelay = finalDelay;
+        this.hasCustomName = hasCustomName;
+        this.customName = customName;
         this.hitList = hitList ?? new();
         this.finalHit = finalHit ?? new(30, 100);
     }
