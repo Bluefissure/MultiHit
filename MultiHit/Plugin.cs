@@ -55,7 +55,12 @@ namespace MultiHit
         private Dictionary<string, string> _customName;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
-        private HashSet<FlyTextKind> _validKinds = new HashSet<FlyTextKind>() { FlyTextKind.NamedAttack, FlyTextKind.NamedCriticalHit, FlyTextKind.NamedCriticalDirectHit};
+        private HashSet<FlyTextKind> _validKinds = new HashSet<FlyTextKind>() {
+            FlyTextKind.NamedAttack,
+            FlyTextKind.NamedCriticalHit,
+            FlyTextKind.NamedDirectHit,
+            FlyTextKind.NamedCriticalDirectHit
+        };
 
         private delegate void AddScreenLogDelegate(
                 Character* target,
