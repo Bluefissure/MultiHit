@@ -55,7 +55,7 @@ namespace MultiHit
         private Dictionary<string, string> _customName;
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
-        private HashSet<int> _ignoreKinds = new HashSet<int>() { 18, 31};
+        private HashSet<FlyTextKind> _validKinds = new HashSet<FlyTextKind>() { FlyTextKind.NamedAttack, FlyTextKind.NamedCriticalHit, FlyTextKind.NamedCriticalDirectHit};
 
         private delegate void AddScreenLogDelegate(
                 Character* target,
@@ -273,6 +273,7 @@ namespace MultiHit
                     string text2 = Encoding.UTF8.GetString(flyText2Ptr, flyText2Len).Trim();
                     var numArray = atkArrayDataHolder._NumberArrays[numIndex];
                     int kind = numArray->IntArray[offsetNum + 1];
+                    FlyTextKind flyKind = (FlyTextKind)kind;
                     int val1 = numArray->IntArray[offsetNum + 2];
                     int val2 = numArray->IntArray[offsetNum + 3];
                     // patch 6.3
@@ -284,8 +285,9 @@ namespace MultiHit
                     // patch 6.2
                     int color = numArray->IntArray[offsetNum + 5];
                     int icon = numArray->IntArray[offsetNum + 6];
+                    PluginLog.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1}text2:{text2} color:{(uint)color:X} icon:{icon}");
 
-                    if (_validActionName.Contains(text1) && !_ignoreKinds.Contains(kind))
+                    if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
                     {
                         var shownActionName = text1;
                         if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
@@ -297,7 +299,6 @@ namespace MultiHit
                                 shownActionName = tempName;
                             }
                         }
-                        PluginLog.Debug($"kind:{kind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} shownActionName:{shownActionName} text2:{text2} color:{(uint)color:X} icon:{icon}");
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
                         int maxTime = 0;
                         if (multiHitList != null)
