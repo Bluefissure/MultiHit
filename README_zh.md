@@ -5,8 +5,8 @@
 **将动作伤害的飘字分成多段。**
 
 通过添加第三方仓库进行安装：
-- 中文版：`https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/repo.json`
-- 国际版：待定
+- 国服：`https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/repo.json`
+- 国际服：`https://raw.githubusercontent.com/Bluefissure/MultiHit/master/repo.json`
 
 通过命令 `/mhit` 打开配置窗口。
 
