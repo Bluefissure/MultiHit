@@ -280,14 +280,14 @@ namespace MultiHit
                     int val1 = numArray->IntArray[offsetNum + 2];
                     int val2 = numArray->IntArray[offsetNum + 3];
                     // patch 6.3
-                    /*
                     int damageTypeIcon = numArray->IntArray[offsetNum + 4];
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
-                    */
                     // patch 6.2
+                    /*
                     int color = numArray->IntArray[offsetNum + 5];
                     int icon = numArray->IntArray[offsetNum + 6];
+                    */
                     PluginLog.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1}text2:{text2} color:{(uint)color:X} icon:{icon}");
 
                     if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
@@ -341,7 +341,7 @@ namespace MultiHit
                                         }
                                         lock (this)
                                         {
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon);
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
                                         }
                                     }
                                     catch (Exception e)
@@ -372,7 +372,7 @@ namespace MultiHit
                                     }
                                     lock (this)
                                     {
-                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon);
+                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon, (uint)damageTypeIcon);
                                     }
                                 }
                                 catch (Exception e)
@@ -560,6 +560,7 @@ namespace MultiHit
                 ref SeString text2,
                 ref uint color,
                 ref uint icon,
+                ref uint damageTypeIcon,
                 ref float yOffset,
                 ref bool handled
             )
