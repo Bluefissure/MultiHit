@@ -1,5 +1,7 @@
 # MultiHit
 
+[中文文档](https://github.com/Bluefissure/MultiHit/blob/CN/README_zh.md)
+
 [![GitHub all releases](https://img.shields.io/github/downloads/Bluefissure/MultiHit/total?color=green)](https://github.com/Bluefissure/MultiHit/releases)
 
 **Split the flytext of action damage into multiple.**
