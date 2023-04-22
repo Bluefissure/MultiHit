@@ -9,14 +9,14 @@
         "TestingAssemblyVersion": "0.0.0.9",
         "RepoUrl": "https://github.com/Bluefissure/MultiHit",
         "ApplicableVersion": "any",
-        "DalamudApiLevel": 7,
+        "DalamudApiLevel": 8,
         "IsHide": "False",
         "IsTestingExclusive": "False",
         "DownloadCount": 0,
         "LastUpdate": 0,
-        "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.9/latest.zip",
-        "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.9/latest.zip",
-        "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.9/latest.zip",
+        "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.9/latest_intl.zip",
+        "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.9/latest_intl.zip",
+        "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.9/latest_intl.zip",
         "IconUrl": "https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/images/icon.png"
     }
 ]
