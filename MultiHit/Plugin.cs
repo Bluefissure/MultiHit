@@ -134,9 +134,7 @@ namespace MultiHit
                 this.updateAffectedAction();
 
                 actionList = new();
-                foreach(var action in _actionSheet.Where(act => act.IsPlayerAction || act.IsPvP || (
-                    act.UnlockLink > 0 && (act.CanTargetHostile || act.CanTargetFriendly)
-                )))
+                foreach(var action in _actionSheet)
                 {
                     actionList.Add(action);
                 }

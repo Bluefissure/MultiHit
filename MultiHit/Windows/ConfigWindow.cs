@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Xml.Linq;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
@@ -21,6 +22,7 @@ public class ConfigWindow : Window, IDisposable
     private Configuration Configuration;
     private Plugin Plugin;
     private string addGroupNameText = "";
+    private string editGroupNameText = "";
     private string addActionFilterText = "";
     private int selectedGroupIdx = -1;
     private int selectedActionIdx = -1;
@@ -176,10 +178,6 @@ public class ConfigWindow : Window, IDisposable
                         }
                         ImGui.EndMenu();
                     }
-                    if (ImGui.Selectable("Edit Group Name"))
-                    {
-
-                    }
                     if (ImGui.Selectable("Enable Group"))
                     {
                         group.enabled = true;
@@ -189,6 +187,25 @@ public class ConfigWindow : Window, IDisposable
                     {
                         group.enabled = false;
                         Configuration.Save();
+                    }
+                    if (ImGui.BeginMenu("Edit Group Name"))
+                    {
+                        var name = editGroupNameText == "" ? group.name : editGroupNameText;
+                        if (ImGui.InputText("##EditGroupPopupNameEdit", ref name, 64))
+                        {
+                            if (name != group.name)
+                            {
+                                editGroupNameText = name;
+                            }
+                        }
+                        if (ImGui.Button("Save"))
+                        {
+                            group.name = editGroupNameText;
+                            editGroupNameText = "";
+                            Configuration.Save();
+                            ImGui.CloseCurrentPopup();
+                        }
+                        ImGui.EndMenu();
                     }
                     if (ImGui.Selectable("Export Group"))
                     {
@@ -334,7 +351,7 @@ public class ConfigWindow : Window, IDisposable
         }
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip("Whether other animation can interrupte the upcoming flytext.");
+            ImGui.SetTooltip("Whether other animation can interrupt the upcoming flytext.");
         }
         ImGui.SameLine();
         if (ImGui.Checkbox("Show Hit", ref action.showHit))
@@ -415,14 +432,16 @@ public class ConfigWindow : Window, IDisposable
         {
             var hitList = CollectionsMarshal.AsSpan(action.hitList);
             int hitIdxToDelete = -1;
-            for(int hitIdx = 0; hitIdx < action.hitList.Count; hitIdx++)
+            int hitIdxToBeColored = -1;
+            uint hitColorToBeColored = 0;
+            for (int hitIdx = 0; hitIdx < action.hitList.Count; hitIdx++)
             {
                 ref var hit = ref hitList[hitIdx];
                 ImGui.Text($"Hit {hitIdx + 1, 3}: ");
                 ImGui.SameLine();
                 int pct = hit.percent;
                 ImGui.Text("Percentage: "); ImGui.SameLine();
-                ImGui.SetNextItemWidth(200);
+                ImGui.SetNextItemWidth(120);
                 if (ImGui.InputInt($"##PercentageHit_{hitIdx}", ref pct, 1, 5))
                 {
                     pct = Math.Min(pct, 100);
@@ -458,12 +477,23 @@ public class ConfigWindow : Window, IDisposable
                     hit.color = ((uint)(col.X * 255.0) << 24) | ((uint)(col.Y * 255.0) << 16) | ((uint)(col.Z * 255.0) << 8) | (uint)(col.W * 255.0);
                     Configuration.Save();
                 }
+                if (ImGui.BeginPopupContextItem($"ApplyColor##{hitIdx}"))
+                {
+                    if (ImGui.Selectable("Apply to all hits"))
+                    {
+                        hitIdxToBeColored = hitIdx;
+                        hitColorToBeColored = uintCol;
+                    }
+                    ImGui.EndPopup();
+                }
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.SetTooltip("Custom colors only work when alpha is not 0.");
                 }
+
                 ImGui.SameLine();
-                if (ImGui.Button($"Delete##DeleteHit_{hitIdx}"))
+                if(ImGuiComponents.IconButton( FontAwesomeIcon.Trash.ToIconString() + $"##{hitIdx}"))
+                //if (ImGui.Button($"Delete##DeleteHit_{hitIdx}"))
                 {
                     hitIdxToDelete = hitIdx;
                 }
@@ -472,6 +502,15 @@ public class ConfigWindow : Window, IDisposable
             {
                 action.hitList.RemoveAt(hitIdxToDelete);
                 Configuration.Save();
+            }
+            if (hitIdxToBeColored != -1)
+            {
+                for (int hitIdx = 0; hitIdx < action.hitList.Count; hitIdx++)
+                {
+                    ref var hit = ref hitList[hitIdx];
+                    hit.color = hitColorToBeColored;
+                    Configuration.Save();
+                }
             }
             ImGui.EndChild();
         }
