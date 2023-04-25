@@ -2,11 +2,14 @@
 
 [![GitHub all releases](https://img.shields.io/github/downloads/Bluefissure/MultiHit/total?color=green)](https://github.com/Bluefissure/MultiHit/releases)
 
+[中文文档](https://github.com/Bluefissure/MultiHit/blob/CN/README_zh.md)
+
 **Split the flytext of action damage into multiple.**
 
 Install by adding 3rd party repo:
 - CN: `https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/repo.json`
-- Intl: TBD
+- CN (Mirror): `https://dalamud_cn_3rd.otters.cloud/plugins/MultiHit`
+- Intl: `https://raw.githubusercontent.com/Bluefissure/MultiHit/master/repo.json`
 
 Open config window by `/mhit`.
 
@@ -34,7 +37,7 @@ Multhit is not recommended for use in high network latency environments.
 
 ### 6. Why is the appearance time of flytext and the delay I input for my own presets not consistent?
 The splitted flytext is triggered by the in-game ones, and there's always a delay for most actions, which is defined in the TMB files.
-In most cases, Multhit is best used with TMB modification. It is recommended to set the start time of flytext in TMB to 0 (3 for AOE skills).
+In most cases, Multhit is best used with TMB modification. It is recommended to set the start time of flytext in TMB to 0 (3 for AOE skills). The [VFXEditor](https://github.com/0ceal0t/Dalamud-VFXEditor) is a good tool to make the modification.
 
 ### 7. Why is there no effect after I make any modifications (including enabling/disabling presets, adding/deleting/modifying values)?
 Make sure to click "apply change" after modifying to apply the changes.
