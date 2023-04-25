@@ -24,6 +24,7 @@ using Lumina.Excel;
 using System.Linq;
 using Newtonsoft.Json;
 using System.IO;
+using Dalamud.Game.ClientState;
 
 namespace MultiHit
 {
@@ -471,6 +472,12 @@ namespace MultiHit
             }
             try
             {
+                var oID = sourceCharacter->GameObject.ObjectID;
+                if(_objectTable == null || _objectTable.Length == 0 || oID != _objectTable[0].ObjectId)
+                {
+                    PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID} is not self, skipping");
+                    return;
+                }
                 int animationId = (int)_actionSheet.GetRow(effectHeader->ActionId).AnimationEnd.Row;
                 if(animationId != -1)
                 {
