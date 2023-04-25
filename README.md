@@ -8,6 +8,7 @@
 
 Install by adding 3rd party repo:
 - CN: `https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/repo.json`
+- CN (Mirror): `https://dalamud_cn_3rd.otters.cloud/plugins/MultiHit`
 - Intl: `https://raw.githubusercontent.com/Bluefissure/MultiHit/master/repo.json`
 
 Open config window by `/mhit`.
