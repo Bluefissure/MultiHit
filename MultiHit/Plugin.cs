@@ -476,6 +476,7 @@ namespace MultiHit
                 if(_objectTable == null || _objectTable.Length == 0 || oID != _objectTable[0].ObjectId)
                 {
                     PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID} is not self, skipping");
+                    _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
                 int animationId = (int)_actionSheet.GetRow(effectHeader->ActionId).AnimationEnd.Row;
