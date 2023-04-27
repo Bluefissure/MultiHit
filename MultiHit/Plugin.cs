@@ -280,8 +280,10 @@ namespace MultiHit
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
                     // patch 6.2
+                    /*
                     var color = numArray->IntArray[offsetNum + 5];
                     var icon = numArray->IntArray[offsetNum + 6];
+                    */
                     var flyText1Len = GetStrLenFromPtr(flyText1Ptr);
                     var text1 = Encoding.UTF8.GetString(flyText1Ptr, flyText1Len).Trim();
                     var flyText2Ptr = strArray->StringArray[offsetStr + 1];
