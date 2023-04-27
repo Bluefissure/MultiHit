@@ -25,6 +25,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using System.IO;
 using Dalamud.Game.ClientState;
+using System.Runtime.InteropServices;
 
 namespace MultiHit
 {
@@ -424,6 +425,24 @@ namespace MultiHit
                 unknown);
         }
 
+        internal void validateActionGroups()
+        {
+            var actionGroups = CollectionsMarshal.AsSpan(Configuration.actionGroups);
+            for (var groupIdx = 0; groupIdx < Configuration.actionGroups.Count; groupIdx++)
+            {
+                ref var group = ref actionGroups[groupIdx];
+                var actionList = CollectionsMarshal.AsSpan(group.actionList);
+                for (var actionIdx = 0; actionIdx < group.actionList.Count; actionIdx++)
+                {
+                    ref var mulHit = ref actionList[actionIdx];
+                    while(mulHit.hitList.Select(hit => hit.percent).Sum() > 100)
+                    {
+                        mulHit.hitList.RemoveAt(mulHit.hitList.Count - 1);
+                    }
+                }
+            }
+        }
+
         internal void updateAffectedAction()
         {
             var validActionName = new HashSet<string>();
@@ -436,9 +455,9 @@ namespace MultiHit
             var multiHitMap = new Dictionary<string, List<Hit>>();
             foreach (var actionList in Configuration.actionGroups.Where(grp => grp.enabled).Select(grp => grp.actionList))
             {
-                foreach (var act in actionList.Where(a => a.enabled))
+                foreach (var mulHit in actionList.Where(a => a.enabled))
                 {
-                    var action = _actionSheet.GetRow((uint)act.actionKey);
+                    var action = _actionSheet.GetRow((uint)mulHit.actionKey);
                     if (action == null)
                     {
                         continue;
@@ -448,25 +467,25 @@ namespace MultiHit
                     {
                         validActionName.Add(actionName);
                     }
-                    if (act.interruptible && !interruptibleActionName.Contains(actionName))
+                    if (mulHit.interruptible && !interruptibleActionName.Contains(actionName))
                     {
                         interruptibleActionName.Add(actionName);
                     }
-                    if (act.showHit && !showHitActionName.Contains(actionName))
+                    if (mulHit.showHit && !showHitActionName.Contains(actionName))
                     {
                         showHitActionName.Add(actionName);
                     }
-                    if (act.showFinal && !showFinalActionName.Contains(actionName))
+                    if (mulHit.showFinal && !showFinalActionName.Contains(actionName))
                     {
                         showFinalActionName.Add(actionName);
-                        finalDelay[action.Name] = act.finalDelay;
+                        finalDelay[action.Name] = mulHit.finalDelay;
                     }
-                    if (act.hasCustomName && !hasCustomActionName.Contains(actionName))
+                    if (mulHit.hasCustomName && !hasCustomActionName.Contains(actionName))
                     {
                         hasCustomActionName.Add(actionName);
-                        customName[action.Name] = act.customName;
+                        customName[action.Name] = mulHit.customName;
                     }
-                    multiHitMap[action.Name] = act.hitList;
+                    multiHitMap[action.Name] = mulHit.hitList;
                 }
             }
             _validActionName = validActionName;
