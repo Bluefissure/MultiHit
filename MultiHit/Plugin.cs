@@ -44,6 +44,7 @@ namespace MultiHit
         private readonly ObjectTable _objectTable;
         private readonly FlyTextGui _ftGui;
         private readonly GameGui _gameGui;
+        private static object _ftLock = new object();
 
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
@@ -169,7 +170,7 @@ namespace MultiHit
             _receiveActionEffectHook?.Enable();
             _addScreenLogHook.Enable();
             _addFlyTextHook.Enable();
-            _ftGui.FlyTextCreated += OnFlyTextCreated;
+            //_ftGui.FlyTextCreated += OnFlyTextCreated;
 
 
             this.PluginInterface.UiBuilder.Draw += DrawUI;
@@ -243,10 +244,10 @@ namespace MultiHit
             try
             {
                 // Known valid flytext region within the atk arrays
-                // patch 6.3
+                // actual index
                 var strIndex = 27;
                 var numIndex = 30;
-                // patch 6.2
+                // dalamud's call
                 // var strIndex = 25;
                 // var numIndex = 28;
                 var atkArrayDataHolder = ((UIModule*)_gameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
@@ -270,29 +271,44 @@ namespace MultiHit
                             unknown);
                         return;
                     }
-                    var flyText1Len = GetStrLenFromPtr(flyText1Ptr);
-                    string text1 = Encoding.UTF8.GetString(flyText1Ptr, flyText1Len).Trim();
-                    var flyText2Ptr = strArray->StringArray[offsetStr + 1];
-                    var flyText2Len = GetStrLenFromPtr(flyText2Ptr);
-                    string text2 = Encoding.UTF8.GetString(flyText2Ptr, flyText2Len).Trim();
                     var numArray = atkArrayDataHolder._NumberArrays[numIndex];
-                    int kind = numArray->IntArray[offsetNum + 1];
-                    FlyTextKind flyKind = (FlyTextKind)kind;
-                    int val1 = numArray->IntArray[offsetNum + 2];
-                    int val2 = numArray->IntArray[offsetNum + 3];
+                    var kind = numArray->IntArray[offsetNum + 1];
+                    var val1 = numArray->IntArray[offsetNum + 2];
+                    var val2 = numArray->IntArray[offsetNum + 3];
                     // patch 6.3
                     int damageTypeIcon = numArray->IntArray[offsetNum + 4];
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
                     // patch 6.2
-                    /*
-                    int color = numArray->IntArray[offsetNum + 5];
-                    int icon = numArray->IntArray[offsetNum + 6];
-                    */
-                    PluginLog.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1}text2:{text2} color:{(uint)color:X} icon:{icon}");
+                    var color = numArray->IntArray[offsetNum + 5];
+                    var icon = numArray->IntArray[offsetNum + 6];
+                    var flyText1Len = GetStrLenFromPtr(flyText1Ptr);
+                    var text1 = Encoding.UTF8.GetString(flyText1Ptr, flyText1Len).Trim();
+                    var flyText2Ptr = strArray->StringArray[offsetStr + 1];
+                    var flyText2Len = GetStrLenFromPtr(flyText2Ptr);
+                    var text2 = Encoding.UTF8.GetString(flyText2Ptr, flyText2Len).Trim();
+                    FlyTextKind flyKind = (FlyTextKind)kind;
 
                     if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
                     {
+                        PluginLog.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
+                        if (val1 <= 0 || val1 > Int32.MaxValue)
+                        {
+                            PluginLog.Debug($"val1:{val1} is not valid");
+                            _addFlyTextHook.Original(
+                                addonFlyText,
+                                actorIndex,
+                                messageMax,
+                                numbers,
+                                offsetNum,
+                                offsetNumMax,
+                                strings,
+                                offsetStr,
+                                offsetStrMax,
+                                unknown);
+                            return;
+
+                        }
                         var shownActionName = text1;
                         if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
                         {
@@ -320,7 +336,6 @@ namespace MultiHit
                                 int tempVal = (int)(val1 * (mulHit.percent * 1.0f / 100f));
                                 maxTime = Math.Max(maxTime, mulHit.time);
                                 uint tempColor = mulHit.color;
-                                PluginLog.Debug($"{mulHit}.color: {mulHit.color:X}");
                                 if ((tempColor & 0xFF) == 0) // if alpha is 0 then use the original color
                                 {
                                     tempColor = (uint)color;
@@ -340,14 +355,14 @@ namespace MultiHit
                                         {
                                             return;
                                         }
-                                        lock (this)
+                                        lock(_ftLock)
                                         {
                                             _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
                                         }
                                     }
                                     catch (Exception e)
                                     {
-                                        PluginLog.Debug($"An error has occurred in MultiHit AddFlyText");
+                                        PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
                                     }
                                 });
                             }
@@ -361,7 +376,6 @@ namespace MultiHit
                             }
                             int finalDelay = 0;
                             _finalDelay.TryGetValue(text1, out finalDelay);
-                            // PluginLog.Debug($"maxTime:{maxTime} finalDelay:{finalDelay}");
                             int delay = 1000 * (maxTime + finalDelay) / 30;
                             Task.Delay(delay).ContinueWith(_ =>
                             {
@@ -371,14 +385,14 @@ namespace MultiHit
                                     {
                                         return;
                                     }
-                                    lock (this)
+                                    lock(_ftLock)
                                     {
                                         _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon, (uint)damageTypeIcon);
                                     }
                                 }
                                 catch (Exception e)
                                 {
-                                    PluginLog.Debug($"An error has occurred in MultiHit AddFlyText");
+                                    PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
                                 }
                             });
 
@@ -596,7 +610,7 @@ namespace MultiHit
                     {
                         try
                         {
-                            lock (this)
+                            lock(_ftLock)
                             {
                                 uint targetIdx = 0;
                                 DebugLog(FlyText, $"targetIdx: {targetIdx}");
@@ -624,7 +638,7 @@ namespace MultiHit
 
         public void Dispose()
         {
-            _ftGui.FlyTextCreated -= OnFlyTextCreated;
+            //_ftGui.FlyTextCreated -= OnFlyTextCreated;
 
             _addScreenLogHook?.Disable();
             _addScreenLogHook?.Dispose();
