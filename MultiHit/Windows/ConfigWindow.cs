@@ -102,6 +102,7 @@ public class ConfigWindow : Window, IDisposable
         ImGui.SetCursorPosX(ImGui.GetContentRegionMax().X - ImGui.CalcTextSize(applyText).X - 10);
         if(Configuration.changed && ImGui.Button(applyText))
         {
+            Plugin.validateActionGroups();
             Plugin.updateAffectedAction();
             Configuration.ApplyChange();
         }
