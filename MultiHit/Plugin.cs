@@ -294,7 +294,17 @@ namespace MultiHit
                     if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
                     {
                         PluginLog.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
-                        if (val1 <= 0 || val1 > Int32.MaxValue)
+                        var shownActionName = text1;
+                        if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
+                        {
+                            var tempName = text1;
+                            _customName.TryGetValue(text1, out tempName);
+                            if(tempName != string.Empty)
+                            {
+                                shownActionName = tempName;
+                            }
+                        }
+                        if (shownActionName == null || val1 <= 0 || val1 > int.MaxValue)
                         {
                             PluginLog.Debug($"val1:{val1} is not valid");
                             _addFlyTextHook.Original(
@@ -310,16 +320,6 @@ namespace MultiHit
                                 unknown);
                             return;
 
-                        }
-                        var shownActionName = text1;
-                        if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
-                        {
-                            var tempName = text1;
-                            _customName.TryGetValue(text1, out tempName);
-                            if(tempName != string.Empty)
-                            {
-                                shownActionName = tempName;
-                            }
                         }
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
                         int maxTime = 0;
