@@ -45,7 +45,7 @@ namespace MultiHit
         private readonly ObjectTable _objectTable;
         private readonly FlyTextGui _ftGui;
         private readonly GameGui _gameGui;
-        private static object _ftLock = new object();
+        // private static object _ftLock = new object();
 
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
@@ -388,10 +388,7 @@ namespace MultiHit
                                         {
                                             return;
                                         }
-                                        lock(_ftLock)
-                                        {
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon);
-                                        }
+                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon);
                                     }
                                     catch (Exception e)
                                     {
@@ -418,10 +415,7 @@ namespace MultiHit
                                     {
                                         return;
                                     }
-                                    lock(_ftLock)
-                                    {
-                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon);
-                                    }
+                                    _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon);
                                 }
                                 catch (Exception e)
                                 {
