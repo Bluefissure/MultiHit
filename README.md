@@ -51,3 +51,5 @@ As mentioned in 1, all modifications only affect your flytext display, so your a
 ### 10. What is the use of Finalhit?
 Finalhit can display the total damage of this attack after the last hit. If you want to visually see the real total damage of each skill, you can try it (it will also be interrupted if the interruption option is enabled).
 
+### 11. Why clicking "Apply Changes" removes some of the hits at the end?
+Make sure the sum of hit percentage doesn't exceed 100%, or the exceeding ones will get removed after applying changes.

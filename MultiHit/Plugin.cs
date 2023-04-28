@@ -65,6 +65,7 @@ namespace MultiHit
             FlyTextKind.NamedCriticalDirectHit
         };
 
+        /*
         private delegate void AddScreenLogDelegate(
                 Character* target,
                 Character* source,
@@ -78,6 +79,7 @@ namespace MultiHit
                 int val4
             );
         private readonly Hook<AddScreenLogDelegate> _addScreenLogHook;
+        */
 
         private delegate void AddFlyTextDelegate(
             IntPtr addonFlyText,
@@ -91,6 +93,15 @@ namespace MultiHit
             uint offsetStrMax,
             int unknown);
         private readonly Hook<AddFlyTextDelegate> _addFlyTextHook;
+
+
+        private delegate void CrashingTick(
+                IntPtr a1,
+                IntPtr a2,
+                IntPtr a3,
+                IntPtr a4
+            );
+        private readonly Hook<CrashingTick> _crashingTickHook;
 
         private delegate void ReceiveActionEffectDelegate(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail);
         private readonly Hook<ReceiveActionEffectDelegate> _receiveActionEffectHook;
@@ -145,8 +156,12 @@ namespace MultiHit
                 var receiveActionEffectFuncPtr = scanner.ScanText("4C 89 44 24 ?? 55 56 41 54 41 55 41 56");
                 _receiveActionEffectHook = Hook<ReceiveActionEffectDelegate>.FromAddress(receiveActionEffectFuncPtr, ReceiveActionEffect);
 
+                /*
                 var addScreenLogPtr = scanner.ScanText("E8 ?? ?? ?? ?? BF ?? ?? ?? ?? 41 F6 87");
                 _addScreenLogHook = Hook<AddScreenLogDelegate>.FromAddress(addScreenLogPtr, AddScreenLogDetour);
+                */
+                var crashingTickPtr = scanner.ScanText("E8 ?? ?? ?? ?? 48 8B 45 28 48 8B CE");
+                _crashingTickHook = Hook<CrashingTick>.FromAddress(crashingTickPtr, CrashingTickDetour);
 
                 var flyTextAddress = new FlyTextGuiAddressResolver();
                 flyTextAddress.Setup(scanner);
@@ -158,8 +173,10 @@ namespace MultiHit
                 PluginLog.Error(ex, $"An error occurred loading DamageInfoPlugin.");
                 PluginLog.Error("Plugin will not be loaded.");
 
-                _addScreenLogHook?.Disable();
-                _addScreenLogHook?.Dispose();
+                // _addScreenLogHook?.Disable();
+                // _addScreenLogHook?.Dispose();
+                _crashingTickHook?.Disable();
+                _crashingTickHook?.Dispose();
                 _addFlyTextHook?.Disable();
                 _addFlyTextHook?.Dispose();
                 _receiveActionEffectHook?.Disable();
@@ -169,8 +186,9 @@ namespace MultiHit
             }
 
             _receiveActionEffectHook?.Enable();
-            _addScreenLogHook.Enable();
-            _addFlyTextHook.Enable();
+            // _addScreenLogHook.Enable();
+            _crashingTickHook?.Enable();
+            _addFlyTextHook?.Enable();
             //_ftGui.FlyTextCreated += OnFlyTextCreated;
 
 
@@ -178,6 +196,19 @@ namespace MultiHit
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         }
 
+        private void CrashingTickDetour(nint a1, nint a2, nint a3, nint a4)
+        {
+            try
+            {
+                _crashingTickHook.Original(a1, a2, a3, a4);
+            }
+            catch (Exception e)
+            {
+                PluginLog.Error(e, "An error occurred in MultiHit CrashingTickDetour.");
+            }
+        }
+
+        /*
         private void AddScreenLogDetour(
                 Character* target,
                 Character* source,
@@ -191,7 +222,6 @@ namespace MultiHit
                 int val4
             )
         {
-            /*
             try
             {
                 var targetId = target->GameObject.ObjectID;
@@ -210,10 +240,10 @@ namespace MultiHit
             {
                 PluginLog.Error(e, "An error occurred in MultiHit.");
             }
-            */
 
             _addScreenLogHook.Original(target, source, logKind, option, actionKind, actionId, val1, val2, serverAttackType, val4);
         }
+        */
 
         private void AddFlyTextDetour(
             IntPtr addonFlyText,
@@ -227,7 +257,7 @@ namespace MultiHit
             uint offsetStrMax,
             int unknown)
         {
-            if (!Configuration.Enabled)
+            if (!Configuration.Enabled || actorIndex <= 1)
             {
                 _addFlyTextHook.Original(
                     addonFlyText,
@@ -661,8 +691,10 @@ namespace MultiHit
         {
             //_ftGui.FlyTextCreated -= OnFlyTextCreated;
 
-            _addScreenLogHook?.Disable();
-            _addScreenLogHook?.Dispose();
+            //_addScreenLogHook?.Disable();
+            //_addScreenLogHook?.Dispose();
+            _crashingTickHook?.Disable();
+            _crashingTickHook?.Dispose();
             _addFlyTextHook?.Disable();
             _addFlyTextHook?.Dispose();
             _receiveActionEffectHook?.Disable();
