@@ -45,7 +45,7 @@ namespace MultiHit
         private readonly ObjectTable _objectTable;
         private readonly FlyTextGui _ftGui;
         private readonly GameGui _gameGui;
-        // private static object _ftLock = new object();
+        private static object[] _ftLocks = Enumerable.Repeat(new object(), 50).ToArray();
 
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
@@ -257,8 +257,9 @@ namespace MultiHit
             uint offsetStrMax,
             int unknown)
         {
-            if (!Configuration.Enabled || actorIndex <= 1)
+            if (!Configuration.Enabled || actorIndex <= 1 || actorIndex >= 50)
             {
+                // don't lock this since locks may not be enough
                 _addFlyTextHook.Original(
                     addonFlyText,
                     actorIndex,
@@ -289,17 +290,20 @@ namespace MultiHit
                     var flyText1Ptr = strArray->StringArray[offsetStr];
                     if (flyText1Ptr == null || (nint)flyText1Ptr == IntPtr.Zero)
                     {
-                        _addFlyTextHook.Original(
-                            addonFlyText,
-                            actorIndex,
-                            messageMax,
-                            numbers,
-                            offsetNum,
-                            offsetNumMax,
-                            strings,
-                            offsetStr,
-                            offsetStrMax,
-                            unknown);
+                        lock (_ftLocks[actorIndex])
+                        {
+                            _addFlyTextHook.Original(
+                                addonFlyText,
+                                actorIndex,
+                                messageMax,
+                                numbers,
+                                offsetNum,
+                                offsetNumMax,
+                                strings,
+                                offsetStr,
+                                offsetStrMax,
+                                unknown);
+                        }
                         return;
                     }
                     var numArray = atkArrayDataHolder._NumberArrays[numIndex];
@@ -338,17 +342,20 @@ namespace MultiHit
                         if (shownActionName == null || val1 <= 0 || val1 > int.MaxValue)
                         {
                             PluginLog.Debug($"val1:{val1} is not valid");
-                            _addFlyTextHook.Original(
-                                addonFlyText,
-                                actorIndex,
-                                messageMax,
-                                numbers,
-                                offsetNum,
-                                offsetNumMax,
-                                strings,
-                                offsetStr,
-                                offsetStrMax,
-                                unknown);
+                            lock (_ftLocks[actorIndex])
+                            {
+                                _addFlyTextHook.Original(
+                                    addonFlyText,
+                                    actorIndex,
+                                    messageMax,
+                                    numbers,
+                                    offsetNum,
+                                    offsetNumMax,
+                                    strings,
+                                    offsetStr,
+                                    offsetStrMax,
+                                    unknown);
+                            }
                             return;
 
                         }
@@ -382,17 +389,20 @@ namespace MultiHit
                                 int delay = 1000 * mulHit.time / 30;
                                 Task.Delay(delay).ContinueWith(_ =>
                                 {
-                                    try
+                                    lock (_ftLocks[actorIndex])
                                     {
-                                        if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
+                                        try
                                         {
-                                            return;
+                                            if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
+                                            {
+                                                return;
+                                            }
+                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon);
                                         }
-                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
+                                        catch (Exception e)
+                                        {
+                                            PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
+                                        }
                                     }
                                 });
                             }
@@ -409,17 +419,20 @@ namespace MultiHit
                             int delay = 1000 * (maxTime + finalDelay) / 30;
                             Task.Delay(delay).ContinueWith(_ =>
                             {
-                                try
+                                lock (_ftLocks[actorIndex])
                                 {
-                                    if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
+                                    try
                                     {
-                                        return;
+                                        if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
+                                        {
+                                            return;
+                                        }
+                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon);
                                     }
-                                    _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon);
-                                }
-                                catch (Exception e)
-                                {
-                                    PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
+                                    catch (Exception e)
+                                    {
+                                        PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
+                                    }
                                 }
                             });
 
@@ -436,17 +449,20 @@ namespace MultiHit
             {
                 PluginLog.Error(e, "An error has occurred in MultiHit");
             }
-            _addFlyTextHook.Original(
-                addonFlyText,
-                actorIndex,
-                messageMax,
-                numbers,
-                offsetNum,
-                offsetNumMax,
-                strings,
-                offsetStr,
-                offsetStrMax,
-                unknown);
+            lock (_ftLocks[actorIndex])
+            {
+                _addFlyTextHook.Original(
+                    addonFlyText,
+                    actorIndex,
+                    messageMax,
+                    numbers,
+                    offsetNum,
+                    offsetNumMax,
+                    strings,
+                    offsetStr,
+                    offsetStrMax,
+                    unknown);
+            }
         }
 
         internal void validateActionGroups()
