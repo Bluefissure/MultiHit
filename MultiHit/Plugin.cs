@@ -273,6 +273,7 @@ namespace MultiHit
                     unknown);
                 return;
             }
+            var splitted = false;
             try
             {
                 // Known valid flytext region within the atk arrays
@@ -357,7 +358,6 @@ namespace MultiHit
                                     unknown);
                             }
                             return;
-
                         }
                         _multiHitMap.TryGetValue(text1, out var multiHitList);
                         int maxTime = 0;
@@ -435,9 +435,9 @@ namespace MultiHit
                                     }
                                 }
                             });
-
                         }
-                        return;
+                        splitted = true;
+                        //return;
                     }
                 }
                 catch (Exception e)
@@ -453,7 +453,7 @@ namespace MultiHit
             {
                 _addFlyTextHook.Original(
                     addonFlyText,
-                    actorIndex,
+                    splitted ? 1000 : actorIndex,
                     messageMax,
                     numbers,
                     offsetNum,
