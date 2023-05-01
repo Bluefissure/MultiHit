@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Authors>Bluefissure</Authors>
     <Company></Company>
-    <Version>0.0.0.16</Version>
+    <Version>0.0.0.17</Version>
     <Description>A Dalamud Plugin.</Description>
     <Copyright></Copyright>
   </PropertyGroup>
