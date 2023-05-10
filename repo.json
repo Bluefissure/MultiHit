@@ -14,9 +14,9 @@
         "IsTestingExclusive": "False",
         "DownloadCount": 0,
         "LastUpdate": 0,
-        "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest.zip",
-        "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest.zip",
-        "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest.zip",
+        "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest_6.3.zip",
+        "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest_6.3.zip",
+        "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest_6.3.zip",
         "IconUrl": "https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/images/icon.png"
     }
 ]
