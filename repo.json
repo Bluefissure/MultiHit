@@ -9,7 +9,7 @@
         "TestingAssemblyVersion": "0.0.0.17",
         "RepoUrl": "https://github.com/Bluefissure/MultiHit",
         "ApplicableVersion": "any",
-        "DalamudApiLevel": 7,
+        "DalamudApiLevel": 8,
         "IsHide": "False",
         "IsTestingExclusive": "False",
         "DownloadCount": 0,
