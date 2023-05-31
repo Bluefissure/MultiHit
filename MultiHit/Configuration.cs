@@ -18,6 +18,7 @@ namespace MultiHit
 
         public bool Enabled = true;
         public List<ActionGroup> actionGroups = new();
+        public bool validateActionGroups = true;
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {

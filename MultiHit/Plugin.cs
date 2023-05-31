@@ -26,6 +26,9 @@ using Newtonsoft.Json;
 using System.IO;
 using Dalamud.Game.ClientState;
 using System.Runtime.InteropServices;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
+using System.Reflection;
+using static Dalamud.Game.Gui.FlyText.FlyTextGui;
 
 namespace MultiHit
 {
@@ -52,8 +55,7 @@ namespace MultiHit
         private HashSet<string> _validActionName;
         private HashSet<string> _interruptibleActionName;
         private HashSet<string> _showHitActionName;
-        private HashSet<string> _showFinalActionName;
-        private Dictionary<string, int> _finalDelay;
+        private Dictionary<string, Hit> _finalHitMap;
         private HashSet<string> _hasCustomActionName;
         private Dictionary<string, string> _customName;
         private Dictionary<string, List<Hit>> _multiHitMap;
@@ -95,6 +97,7 @@ namespace MultiHit
         private readonly Hook<AddFlyTextDelegate> _addFlyTextHook;
 
 
+        private OnFlyTextCreatedDelegate _flyTextCreated;
         private delegate void CrashingTick(
                 IntPtr a1,
                 IntPtr a2,
@@ -166,6 +169,9 @@ namespace MultiHit
                 var flyTextAddress = new FlyTextGuiAddressResolver();
                 flyTextAddress.Setup(scanner);
                 _addFlyTextHook = Hook<AddFlyTextDelegate>.FromAddress(flyTextAddress.AddFlyText, AddFlyTextDetour);
+
+
+                _flyTextCreated = (OnFlyTextCreatedDelegate)_ftGui.GetType().GetField("FlyTextCreated", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_ftGui);
 
             }
             catch (Exception ex)
@@ -273,7 +279,6 @@ namespace MultiHit
                     unknown);
                 return;
             }
-            var splitted = false;
             try
             {
                 // Known valid flytext region within the atk arrays
@@ -397,26 +402,38 @@ namespace MultiHit
                                             {
                                                 return;
                                             }
-                                            _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
+                                            TryAddFlyText((FlyTextKind)kind, actorIndex, tempVal, val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
+                                            //_ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
                                         }
                                         catch (Exception e)
                                         {
-                                            PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
+                                            PluginLog.Error(e, "An error has occurred in MultiHit AddFlyText");
                                         }
                                     }
                                 });
                             }
                         }
-                        if (multiHitList == null || _showFinalActionName.Contains(text1))
+                        if (multiHitList == null || _finalHitMap.ContainsKey(text1))
                         {
                             string tempText2 = text2;
                             if (tempText2.Equals(String.Empty))
                             {
                                 tempText2 = "\0";
                             }
-                            int finalDelay = 0;
-                            _finalDelay.TryGetValue(text1, out finalDelay);
+                            _finalHitMap.TryGetValue(text1, out var finalHit);
+                            int finalDelay = finalHit.time;
                             int delay = 1000 * (maxTime + finalDelay) / 30;
+                            uint tempColor = finalHit.color;
+                            if ((tempColor & 0xFF) == 0)
+                            {
+                                tempColor = (uint)color;
+                            }
+                            else
+                            {
+                                byte[] bytes = BitConverter.GetBytes(tempColor);
+                                Array.Reverse(bytes, 0, bytes.Length);
+                                tempColor = BitConverter.ToUInt32(bytes, 0);
+                            }
                             Task.Delay(delay).ContinueWith(_ =>
                             {
                                 lock (_ftLocks[actorIndex])
@@ -427,33 +444,34 @@ namespace MultiHit
                                         {
                                             return;
                                         }
-                                        _ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)color, (uint)icon, (uint)damageTypeIcon);
+                                        TryAddFlyText((FlyTextKind)kind, actorIndex, val1, val2, shownActionName, tempText2, (uint)tempColor, (uint)icon, (uint)damageTypeIcon);
+                                        //_ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)tempColor, (uint)icon, (uint)damageTypeIcon);
                                     }
                                     catch (Exception e)
                                     {
-                                        PluginLog.Error($"An error has occurred in MultiHit AddFlyText");
+                                        PluginLog.Error(e, "An error has occurred in MultiHit AddFlyText");
                                     }
                                 }
                             });
                         }
-                        splitted = true;
-                        //return;
+                        return;
                     }
                 }
                 catch (Exception e)
                 {
-                    PluginLog.Error(e, $"Skipping");
+                    PluginLog.Error(e, "Skipping");
                 }
             }
             catch (Exception e)
             {
                 PluginLog.Error(e, "An error has occurred in MultiHit");
             }
+            // Not helpful actually
             lock (_ftLocks[actorIndex])
             {
                 _addFlyTextHook.Original(
                     addonFlyText,
-                    splitted ? 1000 : actorIndex,
+                    actorIndex,
                     messageMax,
                     numbers,
                     offsetNum,
@@ -465,8 +483,55 @@ namespace MultiHit
             }
         }
 
+
+        private void TryAddFlyText(FlyTextKind kind, uint actorIndex, int val1, int val2, string text1, string text2, uint color, uint icon, uint damageTypeIcon)
+        {
+
+            float yOffset = 0;
+            var handled = false;
+
+            var tmpKind = kind;
+            var tmpVal1 = val1;
+            var tmpVal2 = val2;
+            var tmpText1 = new SeString(new TextPayload(text1));
+            var tmpText2 = new SeString(new TextPayload(text2));
+            var tmpColor = color;
+            var tmpIcon = icon;
+            var tmpDamageTypeIcon = damageTypeIcon;
+            var tmpYOffset = yOffset;
+
+            if (_flyTextCreated == null)
+            {
+                PluginLog.Debug("No delegate found.");
+            }
+            else
+            {
+                PluginLog.Log($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
+                _flyTextCreated.Invoke(
+                    ref tmpKind,
+                    ref tmpVal1,
+                    ref tmpVal2,
+                    ref tmpText1,
+                    ref tmpText2,
+                    ref tmpColor,
+                    ref tmpIcon,
+                    ref tmpDamageTypeIcon,
+                    ref tmpYOffset,
+                    ref handled
+                 );
+            }
+
+            if(handled)
+            {
+                return;
+            }
+
+            _ftGui.AddFlyText(tmpKind, actorIndex, (uint)tmpVal1, (uint)tmpVal2, tmpText1.ToString(), tmpText2.ToString(), tmpColor, tmpIcon, tmpDamageTypeIcon);
+        }
+
         internal void validateActionGroups()
         {
+            if(!Configuration.validateActionGroups) { return; }
             var actionGroups = CollectionsMarshal.AsSpan(Configuration.actionGroups);
             for (var groupIdx = 0; groupIdx < Configuration.actionGroups.Count; groupIdx++)
             {
@@ -488,8 +553,7 @@ namespace MultiHit
             var validActionName = new HashSet<string>();
             var interruptibleActionName = new HashSet<string>();
             var showHitActionName = new HashSet<string>();
-            var showFinalActionName = new HashSet<string>();
-            var finalDelay = new Dictionary<string, int>();
+            var finalHitMap = new Dictionary<string, Hit>();
             var hasCustomActionName = new HashSet<string>();
             var customName = new Dictionary<string, string>();
             var multiHitMap = new Dictionary<string, List<Hit>>();
@@ -515,10 +579,9 @@ namespace MultiHit
                     {
                         showHitActionName.Add(actionName);
                     }
-                    if (mulHit.showFinal && !showFinalActionName.Contains(actionName))
+                    if (mulHit.showFinal && !finalHitMap.ContainsKey(actionName))
                     {
-                        showFinalActionName.Add(actionName);
-                        finalDelay[action.Name] = mulHit.finalDelay;
+                        finalHitMap[action.Name] = mulHit.finalHit;
                     }
                     if (mulHit.hasCustomName && !hasCustomActionName.Contains(actionName))
                     {
@@ -531,8 +594,7 @@ namespace MultiHit
             _validActionName = validActionName;
             _interruptibleActionName = interruptibleActionName;
             _showHitActionName = showHitActionName;
-            _showFinalActionName = showFinalActionName;
-            _finalDelay = finalDelay;
+            _finalHitMap = finalHitMap;
             _hasCustomActionName = hasCustomActionName;
             _customName = customName;
             _multiHitMap = multiHitMap;
