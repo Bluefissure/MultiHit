@@ -1,22 +1,22 @@
 [
-    {
-        "Author": "Bluefissure, Papachin",
-        "Name": "MultiHit",
-        "Punchline": "Split flytext into multiple hits.",
-        "Description": "Papa asked me for this so here it is.",
-        "InternalName": "MultiHit",
-        "AssemblyVersion": "0.0.0.17",
-        "TestingAssemblyVersion": "0.0.0.17",
-        "RepoUrl": "https://github.com/Bluefissure/MultiHit",
-        "ApplicableVersion": "any",
-        "DalamudApiLevel": 8,
-        "IsHide": "False",
-        "IsTestingExclusive": "False",
-        "DownloadCount": 0,
-        "LastUpdate": 0,
-        "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest_6.3.zip",
-        "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest_6.3.zip",
-        "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.17/latest_6.3.zip",
-        "IconUrl": "https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/images/icon.png"
-    }
+  {
+    "Author": "Bluefissure, Papachin",
+    "Name": "MultiHit",
+    "Punchline": "Split flytext into multiple hits.",
+    "Description": "Papa asked me for this so here it is.",
+    "InternalName": "MultiHit",
+    "AssemblyVersion": "0.0.0.19",
+    "TestingAssemblyVersion": "0.0.0.19",
+    "RepoUrl": "https://github.com/Bluefissure/MultiHit",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 8,
+    "IsHide": "False",
+    "IsTestingExclusive": "False",
+    "DownloadCount": 0,
+    "LastUpdate": 0,
+    "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.19/latest_intl.zip",
+    "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.19/latest_intl.zip",
+    "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.19/latest_intl.zip",
+    "IconUrl": "https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/images/icon.png"
+  }
 ]
