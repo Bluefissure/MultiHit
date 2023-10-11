@@ -6,29 +6,24 @@ using MultiHit.Windows;
 using Dalamud.Game;
 using Dalamud.Hooking;
 using System;
-
-using static MultiHit.LogType;
 using Action = Lumina.Excel.GeneratedSheets.Action;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 using Dalamud.Logging;
-using Dalamud.Data;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Game.ClientState.Objects;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Dalamud.Game.Gui;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Text;
 using Lumina.Excel;
 using System.Linq;
 using Newtonsoft.Json;
 using System.IO;
-using Dalamud.Game.ClientState;
 using System.Runtime.InteropServices;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using System.Reflection;
-using static Dalamud.Game.Gui.FlyText.FlyTextGui;
+using Dalamud.Plugin.Services;
+using static Dalamud.Plugin.Services.IFlyTextGui;
 
 namespace MultiHit
 {
@@ -38,16 +33,17 @@ namespace MultiHit
         private const string CommandName = "/mhit";
 
         private DalamudPluginInterface PluginInterface { get; init; }
-        private CommandManager CommandManager { get; init; }
+        private ICommandManager CommandManager { get; init; }
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("MultiHit");
 
         private ConfigWindow ConfigWindow { get; init; }
         private MainWindow MainWindow { get; init; }
 
-        private readonly ObjectTable _objectTable;
-        private readonly FlyTextGui _ftGui;
-        private readonly GameGui _gameGui;
+        private readonly IObjectTable _objectTable;
+        private readonly IFlyTextGui _ftGui;
+        private readonly IGameGui _gameGui;
+        private readonly IGameInteropProvider _hook;
         private static object[] _ftLocks = Enumerable.Repeat(new object(), 50).ToArray();
 
         private readonly ExcelSheet<Action> _actionSheet;
@@ -61,10 +57,10 @@ namespace MultiHit
         private Dictionary<string, List<Hit>> _multiHitMap;
         private string _lastAnimationName = "undefined";
         private HashSet<FlyTextKind> _validKinds = new HashSet<FlyTextKind>() {
-            FlyTextKind.NamedAttack,
-            FlyTextKind.NamedCriticalHit,
-            FlyTextKind.NamedDirectHit,
-            FlyTextKind.NamedCriticalDirectHit
+            FlyTextKind.Damage,
+            FlyTextKind.DamageCrit,
+            FlyTextKind.DamageDh,
+            FlyTextKind.DamageCritDh
         };
 
         /*
@@ -104,7 +100,7 @@ namespace MultiHit
                 IntPtr a3,
                 IntPtr a4
             );
-        private readonly Hook<CrashingTick> _crashingTickHook;
+        // private readonly Hook<CrashingTick> _crashingTickHook;
 
         private delegate void ReceiveActionEffectDelegate(uint sourceId, Character* sourceCharacter, IntPtr pos, EffectHeader* effectHeader, EffectEntry* effectArray, ulong* effectTail);
         private readonly Hook<ReceiveActionEffectDelegate> _receiveActionEffectHook;
@@ -113,16 +109,18 @@ namespace MultiHit
 
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] CommandManager commandManager,
-            [RequiredVersion("1.0")] DataManager dataMgr,
-            [RequiredVersion("1.0")] ObjectTable objectTable,
-            [RequiredVersion("1.0")] GameGui gameGui,
-            [RequiredVersion("1.0")] FlyTextGui ftGui,
-            [RequiredVersion("1.0")] SigScanner scanner)
+            [RequiredVersion("1.0")] ICommandManager commandManager,
+            [RequiredVersion("1.0")] IDataManager dataMgr,
+            [RequiredVersion("1.0")] IObjectTable objectTable,
+            [RequiredVersion("1.0")] IGameGui gameGui,
+            [RequiredVersion("1.0")] IFlyTextGui ftGui,
+            [RequiredVersion("1.0")] ISigScanner scanner,
+            [RequiredVersion("1.0")] IGameInteropProvider hook)
         {
             _objectTable = objectTable;
             _ftGui = ftGui;
             _gameGui = gameGui;
+            _hook = hook;
 
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
@@ -157,18 +155,17 @@ namespace MultiHit
                 }
 
                 var receiveActionEffectFuncPtr = scanner.ScanText("40 55 53 57 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 70");
-                _receiveActionEffectHook = Hook<ReceiveActionEffectDelegate>.FromAddress(receiveActionEffectFuncPtr, ReceiveActionEffect);
+                _receiveActionEffectHook = _hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
 
                 /*
                 var addScreenLogPtr = scanner.ScanText("E8 ?? ?? ?? ?? BF ?? ?? ?? ?? 41 F6 87");
                 _addScreenLogHook = Hook<AddScreenLogDelegate>.FromAddress(addScreenLogPtr, AddScreenLogDetour);
-                */
                 var crashingTickPtr = scanner.ScanText("E8 ?? ?? ?? ?? 48 8B 45 28 48 8B CE");
-                _crashingTickHook = Hook<CrashingTick>.FromAddress(crashingTickPtr, CrashingTickDetour);
+                _crashingTickHook = _hook.HookFromAddress<CrashingTick>(crashingTickPtr, CrashingTickDetour);
+                */
 
-                var flyTextAddress = new FlyTextGuiAddressResolver();
-                flyTextAddress.Setup(scanner);
-                _addFlyTextHook = Hook<AddFlyTextDelegate>.FromAddress(flyTextAddress.AddFlyText, AddFlyTextDetour);
+                var addFlyTextAddress = scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
+                _addFlyTextHook = _hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
 
 
                 _flyTextCreated = (OnFlyTextCreatedDelegate)_ftGui.GetType().GetField("FlyTextCreated", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_ftGui);
@@ -176,13 +173,13 @@ namespace MultiHit
             }
             catch (Exception ex)
             {
-                PluginLog.Error(ex, $"An error occurred loading DamageInfoPlugin.");
+                PluginLog.Error(ex, $"An error occurred loading MultiHit Plugin.");
                 PluginLog.Error("Plugin will not be loaded.");
 
                 // _addScreenLogHook?.Disable();
                 // _addScreenLogHook?.Dispose();
-                _crashingTickHook?.Disable();
-                _crashingTickHook?.Dispose();
+                // _crashingTickHook?.Disable();
+                // _crashingTickHook?.Dispose();
                 _addFlyTextHook?.Disable();
                 _addFlyTextHook?.Dispose();
                 _receiveActionEffectHook?.Disable();
@@ -193,7 +190,7 @@ namespace MultiHit
 
             _receiveActionEffectHook?.Enable();
             // _addScreenLogHook.Enable();
-            _crashingTickHook?.Enable();
+            // _crashingTickHook?.Enable();
             _addFlyTextHook?.Enable();
             //_ftGui.FlyTextCreated += OnFlyTextCreated;
 
@@ -202,6 +199,7 @@ namespace MultiHit
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         }
 
+        /*
         private void CrashingTickDetour(nint a1, nint a2, nint a3, nint a4)
         {
             try
@@ -214,7 +212,6 @@ namespace MultiHit
             }
         }
 
-        /*
         private void AddScreenLogDetour(
                 Character* target,
                 Character* source,
@@ -331,6 +328,7 @@ namespace MultiHit
                     var flyText2Len = GetStrLenFromPtr(flyText2Ptr);
                     var text2 = Encoding.UTF8.GetString(flyText2Ptr, flyText2Len).Trim();
                     FlyTextKind flyKind = (FlyTextKind)kind;
+                    // PluginLog.Debug($"flyKind:{flyKind}");
 
                     if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
                     {
@@ -770,8 +768,8 @@ namespace MultiHit
 
             //_addScreenLogHook?.Disable();
             //_addScreenLogHook?.Dispose();
-            _crashingTickHook?.Disable();
-            _crashingTickHook?.Dispose();
+            // _crashingTickHook?.Disable();
+            // _crashingTickHook?.Dispose();
             _addFlyTextHook?.Disable();
             _addFlyTextHook?.Dispose();
             _receiveActionEffectHook?.Disable();

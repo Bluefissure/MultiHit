@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Authors>Bluefissure</Authors>
     <Company></Company>
-    <Version>0.0.0.19</Version>
+    <Version>0.0.0.20</Version>
     <Description>A Dalamud Plugin.</Description>
     <Copyright></Copyright>
   </PropertyGroup>
@@ -29,7 +29,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DalamudPackager" Version="2.1.11" />
+    <PackageReference Include="DalamudPackager" Version="2.1.12" />
     <Reference Include="FFXIVClientStructs">
       <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
       <Private>false</Private>
