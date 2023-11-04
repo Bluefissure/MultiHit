@@ -44,10 +44,12 @@ namespace MultiHit
         private readonly IFlyTextGui _ftGui;
         private readonly IGameGui _gameGui;
         private readonly IGameInteropProvider _hook;
+        private readonly IClientState _clientState;
         private static object[] _ftLocks = Enumerable.Repeat(new object(), 50).ToArray();
 
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
+        public readonly Dictionary<uint, Action> actionDict;
         private HashSet<string> _validActionName;
         private HashSet<string> _interruptibleActionName;
         private HashSet<string> _showHitActionName;
@@ -115,12 +117,14 @@ namespace MultiHit
             [RequiredVersion("1.0")] IGameGui gameGui,
             [RequiredVersion("1.0")] IFlyTextGui ftGui,
             [RequiredVersion("1.0")] ISigScanner scanner,
-            [RequiredVersion("1.0")] IGameInteropProvider hook)
+            [RequiredVersion("1.0")] IGameInteropProvider hook,
+            [RequiredVersion("1.0")] IClientState clientState)
         {
             _objectTable = objectTable;
             _ftGui = ftGui;
             _gameGui = gameGui;
             _hook = hook;
+            _clientState = clientState;
 
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
@@ -146,13 +150,15 @@ namespace MultiHit
                 if (_actionSheet == null)
                     throw new NullReferenceException();
 
-                this.updateAffectedAction();
-
                 actionList = new();
-                foreach(var action in _actionSheet)
+                actionDict = new();
+                foreach (var action in _actionSheet)
                 {
                     actionList.Add(action);
+                    actionDict.Add(action.RowId, action);
                 }
+
+                this.updateAffectedAction();
 
                 var receiveActionEffectFuncPtr = scanner.ScanText("40 55 53 57 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 70");
                 _receiveActionEffectHook = _hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
@@ -322,11 +328,9 @@ namespace MultiHit
                     var color = numArray->IntArray[offsetNum + 5];
                     var icon = numArray->IntArray[offsetNum + 6];
                     */
-                    var flyText1Len = GetStrLenFromPtr(flyText1Ptr);
-                    var text1 = Encoding.UTF8.GetString(flyText1Ptr, flyText1Len).Trim();
+                    var text1 = Marshal.PtrToStringUTF8((nint)flyText1Ptr);
                     var flyText2Ptr = strArray->StringArray[offsetStr + 1];
-                    var flyText2Len = GetStrLenFromPtr(flyText2Ptr);
-                    var text2 = Encoding.UTF8.GetString(flyText2Ptr, flyText2Len).Trim();
+                    var text2 = Marshal.PtrToStringUTF8((nint)flyText2Ptr);
                     FlyTextKind flyKind = (FlyTextKind)kind;
                     // PluginLog.Debug($"flyKind:{flyKind}");
 
@@ -559,7 +563,7 @@ namespace MultiHit
             {
                 foreach (var mulHit in actionList.Where(a => a.enabled))
                 {
-                    var action = _actionSheet.GetRow((uint)mulHit.actionKey);
+                    var action = actionDict.GetValueOrDefault((uint)mulHit.actionKey);
                     if (action == null)
                     {
                         continue;
@@ -613,16 +617,22 @@ namespace MultiHit
                     return;
                 }
                 var oID = sourceCharacter->GameObject.ObjectID;
-                if(_objectTable == null || _objectTable.Length == 0 || oID != _objectTable[0].ObjectId)
+                if(_clientState.LocalPlayer == null || oID != _clientState.LocalPlayer.ObjectId)
                 {
                     PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID} is not self, skipping");
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
-                int animationId = (int)_actionSheet.GetRow(effectHeader->ActionId).AnimationEnd.Row;
+                var action = actionDict.GetValueOrDefault(effectHeader->ActionId);
+                if (action == null)
+                {
+                    PluginLog.Debug("action is null");
+                    return;
+                }
+                int animationId = (int)action.AnimationEnd.Row;
                 if(animationId != -1)
                 {
-                    _lastAnimationName = _actionSheet.GetRow(effectHeader->ActionId).Name;
+                    _lastAnimationName = action.Name;
                 }
                 PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
             }
@@ -681,7 +691,7 @@ namespace MultiHit
                 for (var i = 0; i < group.actionList.Count; i ++)
                 {
                     var act = group.actionList[i];
-                    var action = _actionSheet.GetRow((uint)act.actionKey);
+                    var action = actionDict.GetValueOrDefault((uint)act.actionKey);
                     if (action == null)
                     {
                         continue;
