@@ -31,6 +31,7 @@ namespace MultiHit
     {
         public string Name => "MultiHit";
         private const string CommandName = "/mhit";
+        private const char specialChar = '\u00A7';
 
         private DalamudPluginInterface PluginInterface { get; init; }
         private ICommandManager CommandManager { get; init; }
@@ -254,6 +255,7 @@ namespace MultiHit
         }
         */
 
+        [Obsolete]
         private void AddFlyTextDetour(
             IntPtr addonFlyText,
             uint actorIndex,
@@ -319,18 +321,49 @@ namespace MultiHit
                     var kind = numArray->IntArray[offsetNum + 1];
                     var val1 = numArray->IntArray[offsetNum + 2];
                     var val2 = numArray->IntArray[offsetNum + 3];
-                    // patch 6.3
                     int damageTypeIcon = numArray->IntArray[offsetNum + 4];
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
-                    // patch 6.2
-                    /*
-                    var color = numArray->IntArray[offsetNum + 5];
-                    var icon = numArray->IntArray[offsetNum + 6];
-                    */
                     var text1 = Marshal.PtrToStringUTF8((nint)flyText1Ptr);
                     var flyText2Ptr = strArray->StringArray[offsetStr + 1];
                     var text2 = Marshal.PtrToStringUTF8((nint)flyText2Ptr);
+                    if (text1 == null || text2 == null)
+                    {
+                        lock (_ftLocks[actorIndex])
+                        {
+                            _addFlyTextHook.Original(
+                                addonFlyText,
+                                actorIndex,
+                                messageMax,
+                                numbers,
+                                offsetNum,
+                                offsetNumMax,
+                                strings,
+                                offsetStr,
+                                offsetStrMax,
+                                unknown);
+                        }
+                        return;
+                    }
+                    if (text1.EndsWith(specialChar) && text1.Length >= 1)
+                    {
+                        Marshal.WriteByte((nint)flyText1Ptr + text1.Length - 1, 0);
+                        lock (_ftLocks[actorIndex])
+                        {
+                            _addFlyTextHook.Original(
+                                addonFlyText,
+                                actorIndex,
+                                messageMax,
+                                numbers,
+                                offsetNum,
+                                offsetNumMax,
+                                strings,
+                                offsetStr,
+                                offsetStrMax,
+                                unknown);
+                        }
+                        return;
+                    }
                     FlyTextKind flyKind = (FlyTextKind)kind;
                     // PluginLog.Debug($"flyKind:{flyKind}");
 
@@ -375,8 +408,8 @@ namespace MultiHit
                             {
                                 tempIdx += 1;
                                 int hitIdx = tempIdx;
-                                string tempText2 = _showHitActionName.Contains(text1) ? $"Hit#{hitIdx}" : text2;
-                                if (tempText2.Equals(String.Empty))
+                                var tempText2 = _showHitActionName.Contains(text1) ? $"Hit#{hitIdx}" : text2;
+                                if (tempText2 == null || tempText2.Equals(string.Empty))
                                 {
                                     tempText2 = "\0";
                                 }
@@ -417,8 +450,8 @@ namespace MultiHit
                         }
                         if (multiHitList == null || _finalHitMap.ContainsKey(text1))
                         {
-                            string tempText2 = text2;
-                            if (tempText2.Equals(String.Empty))
+                            var tempText2 = text2;
+                            if (tempText2 == null || tempText2.Equals(string.Empty))
                             {
                                 tempText2 = "\0";
                             }
@@ -495,7 +528,7 @@ namespace MultiHit
             var tmpKind = kind;
             var tmpVal1 = val1;
             var tmpVal2 = val2;
-            var tmpText1 = new SeString(new TextPayload(text1));
+            var tmpText1 = new SeString(new TextPayload(text1 + specialChar));
             var tmpText2 = new SeString(new TextPayload(text2));
             var tmpColor = color;
             var tmpIcon = icon;
@@ -710,6 +743,7 @@ namespace MultiHit
             }
         }
 
+        /*
         private void OnFlyTextCreated(
                 ref FlyTextKind kind,
                 ref int val1,
@@ -724,7 +758,6 @@ namespace MultiHit
             )
         {
             return;
-            /*
             try
             {
                 var ftKind = kind;
@@ -769,8 +802,8 @@ namespace MultiHit
             {
                 PluginLog.Error(e, "An error has occurred in MultiHit");
             }
-            */
         }
+        */
 
         public void Dispose()
         {
