@@ -528,7 +528,7 @@ namespace MultiHit
             var tmpKind = kind;
             var tmpVal1 = val1;
             var tmpVal2 = val2;
-            var tmpText1 = new SeString(new TextPayload(text1 + specialChar));
+            var tmpText1 = new SeString(new TextPayload(text1));
             var tmpText2 = new SeString(new TextPayload(text2));
             var tmpColor = color;
             var tmpIcon = icon;
@@ -541,7 +541,7 @@ namespace MultiHit
             }
             else
             {
-                PluginLog.Log($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
+                PluginLog.Debug($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
                 _flyTextCreated.Invoke(
                     ref tmpKind,
                     ref tmpVal1,
@@ -561,7 +561,7 @@ namespace MultiHit
                 return;
             }
 
-            _ftGui.AddFlyText(tmpKind, actorIndex, (uint)tmpVal1, (uint)tmpVal2, tmpText1.ToString(), tmpText2.ToString(), tmpColor, tmpIcon, tmpDamageTypeIcon);
+            _ftGui.AddFlyText(tmpKind, actorIndex, (uint)tmpVal1, (uint)tmpVal2, tmpText1.ToString() + specialChar, tmpText2.ToString(), tmpColor, tmpIcon, tmpDamageTypeIcon);
         }
 
         internal void validateActionGroups()
