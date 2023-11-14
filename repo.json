@@ -5,8 +5,8 @@
     "Punchline": "Split flytext into multiple hits.",
     "Description": "Papa asked me for this so here it is.",
     "InternalName": "MultiHit",
-    "AssemblyVersion": "0.0.0.21",
-    "TestingAssemblyVersion": "0.0.0.21",
+    "AssemblyVersion": "0.0.0.22",
+    "TestingAssemblyVersion": "0.0.0.22",
     "RepoUrl": "https://github.com/Bluefissure/MultiHit",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 9,
@@ -14,9 +14,9 @@
     "IsTestingExclusive": "False",
     "DownloadCount": 0,
     "LastUpdate": 0,
-    "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.21/latest_intl.zip",
-    "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.21/latest_intl.zip",
-    "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.21/latest_intl.zip",
+    "DownloadLinkInstall": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.22/latest.zip",
+    "DownloadLinkTesting": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.22/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/Bluefissure/MultiHit/releases/download/v0.0.0.22/latest.zip",
     "IconUrl": "https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/images/icon.png"
   }
 ]
