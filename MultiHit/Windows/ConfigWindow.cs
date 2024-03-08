@@ -242,12 +242,12 @@ public class ConfigWindow : Window, IDisposable
                             }, startDir);
                             _dialogOpen = true;
                         }
-                        PluginLog.Debug($"Exporting group#{groupIdx}");
+                        Plugin.log.Debug($"Exporting group#{groupIdx}");
                     }
                     if (ImGui.Selectable("Delete"))
                     {
                         groupToDeleteIdx = groupIdx;
-                        PluginLog.Debug($"To delete group#{groupIdx}");
+                        Plugin.log.Debug($"To delete group#{groupIdx}");
                     }
                     ImGui.EndPopup();
                 }
@@ -284,13 +284,13 @@ public class ConfigWindow : Window, IDisposable
                                 if (ImGui.Selectable("Delete"))
                                 {
                                     actionToDeleteIdx = actionIdx;
-                                    PluginLog.Debug($"To delete action {action}");
+                                    Plugin.log.Debug($"To delete action {action}");
                                 }
                                 ImGui.EndPopup();
                             }
                             if (actionOpen)
                             {
-                                PluginLog.Debug($"Selecting {action}");
+                                Plugin.log.Debug($"Selecting {action}");
                                 selectedGroupIdx = groupIdx;
                                 selectedActionIdx = actionIdx;
                             }

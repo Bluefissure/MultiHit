@@ -46,6 +46,7 @@ namespace MultiHit
         private readonly IGameGui _gameGui;
         private readonly IGameInteropProvider _hook;
         private readonly IClientState _clientState;
+        internal readonly IPluginLog log;
         private static object[] _ftLocks = Enumerable.Repeat(new object(), 50).ToArray();
 
         private readonly ExcelSheet<Action> _actionSheet;
@@ -119,13 +120,15 @@ namespace MultiHit
             [RequiredVersion("1.0")] IFlyTextGui ftGui,
             [RequiredVersion("1.0")] ISigScanner scanner,
             [RequiredVersion("1.0")] IGameInteropProvider hook,
-            [RequiredVersion("1.0")] IClientState clientState)
+            [RequiredVersion("1.0")] IClientState clientState,
+            [RequiredVersion("1.0")] IPluginLog pluginLog)
         {
             _objectTable = objectTable;
             _ftGui = ftGui;
             _gameGui = gameGui;
             _hook = hook;
             _clientState = clientState;
+            log = pluginLog;
 
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
@@ -180,8 +183,8 @@ namespace MultiHit
             }
             catch (Exception ex)
             {
-                PluginLog.Error(ex, $"An error occurred loading MultiHit Plugin.");
-                PluginLog.Error("Plugin will not be loaded.");
+                log.Error(ex, $"An error occurred loading MultiHit Plugin.");
+                log.Error("Plugin will not be loaded.");
 
                 // _addScreenLogHook?.Disable();
                 // _addScreenLogHook?.Dispose();
@@ -215,7 +218,7 @@ namespace MultiHit
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, "An error occurred in MultiHit CrashingTickDetour.");
+                _pluginLog.Error(e, "An error occurred in MultiHit CrashingTickDetour.");
             }
         }
 
@@ -248,7 +251,7 @@ namespace MultiHit
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, "An error occurred in MultiHit.");
+                _pluginLog.Error(e, "An error occurred in MultiHit.");
             }
 
             _addScreenLogHook.Original(target, source, logKind, option, actionKind, actionId, val1, val2, serverAttackType, val4);
@@ -294,7 +297,7 @@ namespace MultiHit
                 // var strIndex = 25;
                 // var numIndex = 28;
                 var atkArrayDataHolder = ((UIModule*)_gameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
-                PluginLog.Debug($"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
+                log.Debug($"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
                 try
                 {
                     var strArray = atkArrayDataHolder._StringArrays[strIndex];
@@ -327,6 +330,7 @@ namespace MultiHit
                     var text1 = Marshal.PtrToStringUTF8((nint)flyText1Ptr);
                     var flyText2Ptr = strArray->StringArray[offsetStr + 1];
                     var text2 = Marshal.PtrToStringUTF8((nint)flyText2Ptr);
+                    // _pluginLog.Debug($"text1:{text1} text2:{text2}");
                     if (text1 == null || text2 == null)
                     {
                         lock (_ftLocks[actorIndex])
@@ -347,7 +351,8 @@ namespace MultiHit
                     }
                     if (text1.EndsWith(specialChar) && text1.Length >= 1)
                     {
-                        Marshal.WriteByte((nint)flyText1Ptr + text1.Length - 1, 0);
+                        var bytes = Encoding.UTF8.GetBytes(text1.Substring(0, text1.Length - 1));
+                        Marshal.WriteByte((nint)flyText1Ptr + bytes.Length, 0);
                         lock (_ftLocks[actorIndex])
                         {
                             _addFlyTextHook.Original(
@@ -365,11 +370,11 @@ namespace MultiHit
                         return;
                     }
                     FlyTextKind flyKind = (FlyTextKind)kind;
-                    // PluginLog.Debug($"flyKind:{flyKind}");
+                    // _pluginLog.Debug($"flyKind:{flyKind}");
 
                     if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
                     {
-                        PluginLog.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
+                        log.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
                         var shownActionName = text1;
                         if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
                         {
@@ -382,7 +387,7 @@ namespace MultiHit
                         }
                         if (shownActionName == null || val1 <= 0 || val1 > int.MaxValue)
                         {
-                            PluginLog.Debug($"val1:{val1} is not valid");
+                            log.Debug($"val1:{val1} is not valid");
                             lock (_ftLocks[actorIndex])
                             {
                                 _addFlyTextHook.Original(
@@ -442,7 +447,7 @@ namespace MultiHit
                                         }
                                         catch (Exception e)
                                         {
-                                            PluginLog.Error(e, "An error has occurred in MultiHit AddFlyText");
+                                            log.Error(e, "An error has occurred in MultiHit AddFlyText");
                                         }
                                     }
                                 });
@@ -484,7 +489,7 @@ namespace MultiHit
                                     }
                                     catch (Exception e)
                                     {
-                                        PluginLog.Error(e, "An error has occurred in MultiHit AddFlyText");
+                                        log.Error(e, "An error has occurred in MultiHit AddFlyText");
                                     }
                                 }
                             });
@@ -494,12 +499,12 @@ namespace MultiHit
                 }
                 catch (Exception e)
                 {
-                    PluginLog.Error(e, "Skipping");
+                    log.Error(e, "Skipping");
                 }
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, "An error has occurred in MultiHit");
+                log.Error(e, "An error has occurred in MultiHit");
             }
             // Not helpful actually
             lock (_ftLocks[actorIndex])
@@ -537,11 +542,11 @@ namespace MultiHit
 
             if (_flyTextCreated == null)
             {
-                PluginLog.Debug("No delegate found.");
+                log.Debug("No delegate found.");
             }
             else
             {
-                PluginLog.Debug($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
+                log.Debug($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
                 _flyTextCreated.Invoke(
                     ref tmpKind,
                     ref tmpVal1,
@@ -652,14 +657,14 @@ namespace MultiHit
                 var oID = sourceCharacter->GameObject.ObjectID;
                 if(_clientState.LocalPlayer == null || oID != _clientState.LocalPlayer.ObjectId)
                 {
-                    PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID} is not self, skipping");
+                    log.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID} is not self, skipping");
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
                 var action = actionDict.GetValueOrDefault(effectHeader->ActionId);
                 if (action == null)
                 {
-                    PluginLog.Debug("action is null");
+                    log.Debug("action is null");
                     return;
                 }
                 int animationId = (int)action.AnimationEnd.Row;
@@ -667,11 +672,11 @@ namespace MultiHit
                 {
                     _lastAnimationName = action.Name;
                 }
-                PluginLog.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
+                log.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, "An error has occurred in MultiHit.");
+                log.Error(e, "An error has occurred in MultiHit.");
             }
 
             _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
@@ -688,11 +693,11 @@ namespace MultiHit
                     var fileName = Path.Combine(d.FullName, group.name.Replace(' ', '_') + ".json");
                     File.WriteAllText(fileName, jsonStr);
                 }
-                PluginLog.Information($"Export {Configuration.actionGroups.Count} groups into {path}.");
+                log.Information($"Export {Configuration.actionGroups.Count} groups into {path}.");
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, $"An error has occurred while exporting to {path}.");
+                log.Error(e, $"An error has occurred while exporting to {path}.");
             }
         }
         internal void ExportGroup(string path, ActionGroup group)
@@ -703,11 +708,11 @@ namespace MultiHit
                 var jsonStr = JsonConvert.SerializeObject(group);
                 var fileName = Path.Combine(d.FullName, group.name.Replace(' ', '_') + ".json");
                 File.WriteAllText(fileName, jsonStr);
-                PluginLog.Information($"Export 1 group into {path}.");
+                log.Information($"Export 1 group into {path}.");
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, $"An error has occurred while exporting to {path}.");
+                log.Error(e, $"An error has occurred while exporting to {path}.");
             }
         }
         internal void ImportGroup(string filename)
@@ -735,11 +740,11 @@ namespace MultiHit
                 group.actionList = tempActionList;
                 Configuration.actionGroups.Add(group);
                 Configuration.Save();
-                PluginLog.Information($"Imported group {group.name}.");
+                log.Information($"Imported group {group.name}.");
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, $"An error has occurred while importing from {filename}.");
+                log.Error(e, $"An error has occurred while importing from {filename}.");
             }
         }
 
@@ -800,7 +805,7 @@ namespace MultiHit
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, "An error has occurred in MultiHit");
+                _pluginLog.Error(e, "An error has occurred in MultiHit");
             }
         }
         */
