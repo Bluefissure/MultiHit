@@ -31,23 +31,34 @@ namespace MultiHit
     {
         public string Name => "MultiHit";
         private const string CommandName = "/mhit";
-        private const char specialChar = '\u00A7';
-
-        private DalamudPluginInterface PluginInterface { get; init; }
-        private ICommandManager CommandManager { get; init; }
+        private const char SpecialChar = '\u00A7';
+        [PluginService]
+        internal static IDalamudPluginInterface PluginInterface { get; private set; }
+        [PluginService]
+        internal static ICommandManager CommandManager { get; set; }
+        [PluginService]
+        internal static IObjectTable ObjectTable { get; set; }
+        [PluginService]
+        internal static IFlyTextGui FTGui { get; set; }
+        [PluginService]
+        internal static IGameGui GameGui { get; set; }
+        [PluginService]
+        internal static IGameInteropProvider Hook { get; set; }
+        [PluginService]
+        internal static IClientState ClientState { get; set; }
+        [PluginService]
+        internal static IDataManager DataManager { get; set; }
+        [PluginService]
+        internal static ISigScanner Scanner { get; set; }
+        [PluginService]
+        internal static IPluginLog Log { get; set; }
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("MultiHit");
 
         private ConfigWindow ConfigWindow { get; init; }
         private MainWindow MainWindow { get; init; }
 
-        private readonly IObjectTable _objectTable;
-        private readonly IFlyTextGui _ftGui;
-        private readonly IGameGui _gameGui;
-        private readonly IGameInteropProvider _hook;
-        private readonly IClientState _clientState;
-        internal readonly IPluginLog log;
-        private static object[] _ftLocks = Enumerable.Repeat(new object(), 50).ToArray();
+        internal static object[] _ftLocks = Enumerable.Repeat(new object(), 50).ToArray();
 
         private readonly ExcelSheet<Action> _actionSheet;
         public readonly List<Action> actionList;
@@ -111,30 +122,9 @@ namespace MultiHit
 
 
 
-        public Plugin(
-            [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] ICommandManager commandManager,
-            [RequiredVersion("1.0")] IDataManager dataMgr,
-            [RequiredVersion("1.0")] IObjectTable objectTable,
-            [RequiredVersion("1.0")] IGameGui gameGui,
-            [RequiredVersion("1.0")] IFlyTextGui ftGui,
-            [RequiredVersion("1.0")] ISigScanner scanner,
-            [RequiredVersion("1.0")] IGameInteropProvider hook,
-            [RequiredVersion("1.0")] IClientState clientState,
-            [RequiredVersion("1.0")] IPluginLog pluginLog)
+        public Plugin()
         {
-            _objectTable = objectTable;
-            _ftGui = ftGui;
-            _gameGui = gameGui;
-            _hook = hook;
-            _clientState = clientState;
-            log = pluginLog;
-
-            this.PluginInterface = pluginInterface;
-            this.CommandManager = commandManager;
-
-            this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            this.Configuration.Initialize(this.PluginInterface);
+            this.Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
             ConfigWindow = new ConfigWindow(this);
             MainWindow = new MainWindow(this);
@@ -142,14 +132,14 @@ namespace MultiHit
             WindowSystem.AddWindow(ConfigWindow);
             WindowSystem.AddWindow(MainWindow);
 
-            this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
                 HelpMessage = "Open MultiHit window."
             });
 
             try
             {
-                _actionSheet = dataMgr.GetExcelSheet<Action>();
+                _actionSheet = DataManager.GetExcelSheet<Action>();
 
                 if (_actionSheet == null)
                     throw new NullReferenceException();
@@ -164,8 +154,8 @@ namespace MultiHit
 
                 this.updateAffectedAction();
 
-                var receiveActionEffectFuncPtr = scanner.ScanText("40 55 53 57 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 70");
-                _receiveActionEffectHook = _hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
+                var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 56 57 41 54 41 55 41 56 48 8D AC 24 ?? ?? ?? ??");
+                _receiveActionEffectHook = Hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
 
                 /*
                 var addScreenLogPtr = scanner.ScanText("E8 ?? ?? ?? ?? BF ?? ?? ?? ?? 41 F6 87");
@@ -174,17 +164,17 @@ namespace MultiHit
                 _crashingTickHook = _hook.HookFromAddress<CrashingTick>(crashingTickPtr, CrashingTickDetour);
                 */
 
-                var addFlyTextAddress = scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
-                _addFlyTextHook = _hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
+                var addFlyTextAddress = Scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
+                _addFlyTextHook = Hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
 
 
-                _flyTextCreated = (OnFlyTextCreatedDelegate)_ftGui.GetType().GetField("FlyTextCreated", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_ftGui);
+                _flyTextCreated = (OnFlyTextCreatedDelegate)FTGui.GetType().GetField("FlyTextCreated", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(FTGui);
 
             }
             catch (Exception ex)
             {
-                log.Error(ex, $"An error occurred loading MultiHit Plugin.");
-                log.Error("Plugin will not be loaded.");
+                Log.Error(ex, $"An error occurred loading MultiHit Plugin.");
+                Log.Error("Plugin will not be loaded.");
 
                 // _addScreenLogHook?.Disable();
                 // _addScreenLogHook?.Dispose();
@@ -205,8 +195,8 @@ namespace MultiHit
             //_ftGui.FlyTextCreated += OnFlyTextCreated;
 
 
-            this.PluginInterface.UiBuilder.Draw += DrawUI;
-            this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            PluginInterface.UiBuilder.Draw += DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         }
 
         /*
@@ -296,8 +286,8 @@ namespace MultiHit
                 // dalamud's call
                 // var strIndex = 25;
                 // var numIndex = 28;
-                var atkArrayDataHolder = ((UIModule*)_gameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
-                log.Debug($"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
+                var atkArrayDataHolder = ((UIModule*)GameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
+                Log.Debug($"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
                 try
                 {
                     var strArray = atkArrayDataHolder._StringArrays[strIndex];
@@ -349,7 +339,7 @@ namespace MultiHit
                         }
                         return;
                     }
-                    if (text1.EndsWith(specialChar) && text1.Length >= 1)
+                    if (text1.EndsWith(SpecialChar) && text1.Length >= 1)
                     {
                         var bytes = Encoding.UTF8.GetBytes(text1.Substring(0, text1.Length - 1));
                         Marshal.WriteByte((nint)flyText1Ptr + bytes.Length, 0);
@@ -374,7 +364,7 @@ namespace MultiHit
 
                     if (_validActionName.Contains(text1) && _validKinds.Contains(flyKind))
                     {
-                        log.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
+                        Log.Debug($"kind:{flyKind} actorIndex:{actorIndex} val1:{val1} val2:{val2} text1:{text1} text2:{text2} color:{(uint)color:X} icon:{icon}");
                         var shownActionName = text1;
                         if(_hasCustomActionName.Contains(text1) && _customName.ContainsKey(text1))
                         {
@@ -387,7 +377,7 @@ namespace MultiHit
                         }
                         if (shownActionName == null || val1 <= 0 || val1 > int.MaxValue)
                         {
-                            log.Debug($"val1:{val1} is not valid");
+                            Log.Debug($"val1:{val1} is not valid");
                             lock (_ftLocks[actorIndex])
                             {
                                 _addFlyTextHook.Original(
@@ -447,7 +437,7 @@ namespace MultiHit
                                         }
                                         catch (Exception e)
                                         {
-                                            log.Error(e, "An error has occurred in MultiHit AddFlyText");
+                                            Log.Error(e, "An error has occurred in MultiHit AddFlyText");
                                         }
                                     }
                                 });
@@ -489,7 +479,7 @@ namespace MultiHit
                                     }
                                     catch (Exception e)
                                     {
-                                        log.Error(e, "An error has occurred in MultiHit AddFlyText");
+                                        Log.Error(e, "An error has occurred in MultiHit AddFlyText");
                                     }
                                 }
                             });
@@ -499,12 +489,12 @@ namespace MultiHit
                 }
                 catch (Exception e)
                 {
-                    log.Error(e, "Skipping");
+                    Log.Error(e, "Skipping");
                 }
             }
             catch (Exception e)
             {
-                log.Error(e, "An error has occurred in MultiHit");
+                Log.Error(e, "An error has occurred in MultiHit");
             }
             // Not helpful actually
             lock (_ftLocks[actorIndex])
@@ -542,11 +532,11 @@ namespace MultiHit
 
             if (_flyTextCreated == null)
             {
-                log.Debug("No delegate found.");
+                Log.Debug("No delegate found.");
             }
             else
             {
-                log.Debug($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
+                Log.Debug($"Found flyTextCreated delegates: {_flyTextCreated.GetInvocationList().Length}");
                 _flyTextCreated.Invoke(
                     ref tmpKind,
                     ref tmpVal1,
@@ -566,7 +556,7 @@ namespace MultiHit
                 return;
             }
 
-            _ftGui.AddFlyText(tmpKind, actorIndex, (uint)tmpVal1, (uint)tmpVal2, tmpText1.ToString() + specialChar, tmpText2.ToString(), tmpColor, tmpIcon, tmpDamageTypeIcon);
+            FTGui.AddFlyText(tmpKind, actorIndex, (uint)tmpVal1, (uint)tmpVal2, tmpText1.ToString() + SpecialChar, tmpText2.ToString(), tmpColor, tmpIcon, tmpDamageTypeIcon);
         }
 
         internal void validateActionGroups()
@@ -654,17 +644,17 @@ namespace MultiHit
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
-                var oID = sourceCharacter->GameObject.ObjectID;
-                if(_clientState.LocalPlayer == null || oID != _clientState.LocalPlayer.ObjectId)
+                var oID = sourceCharacter->GameObject.BaseId;
+                if(ClientState.LocalPlayer == null || oID != ClientState.LocalPlayer.GameObjectId)
                 {
-                    log.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID} is not self, skipping");
+                    Log.Debug($"--- source actor: {sourceCharacter->GameObject.BaseId} is not self, skipping");
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
                 var action = actionDict.GetValueOrDefault(effectHeader->ActionId);
                 if (action == null)
                 {
-                    log.Debug("action is null");
+                    Log.Debug("action is null");
                     return;
                 }
                 int animationId = (int)action.AnimationEnd.Row;
@@ -672,11 +662,11 @@ namespace MultiHit
                 {
                     _lastAnimationName = action.Name;
                 }
-                log.Debug($"--- source actor: {sourceCharacter->GameObject.ObjectID}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
+                Log.Debug($"--- source actor: {sourceCharacter->GameObject.BaseId}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
             }
             catch (Exception e)
             {
-                log.Error(e, "An error has occurred in MultiHit.");
+                Log.Error(e, "An error has occurred in MultiHit.");
             }
 
             _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
@@ -693,11 +683,11 @@ namespace MultiHit
                     var fileName = Path.Combine(d.FullName, group.name.Replace(' ', '_') + ".json");
                     File.WriteAllText(fileName, jsonStr);
                 }
-                log.Information($"Export {Configuration.actionGroups.Count} groups into {path}.");
+                Log.Information($"Export {Configuration.actionGroups.Count} groups into {path}.");
             }
             catch (Exception e)
             {
-                log.Error(e, $"An error has occurred while exporting to {path}.");
+                Log.Error(e, $"An error has occurred while exporting to {path}.");
             }
         }
         internal void ExportGroup(string path, ActionGroup group)
@@ -708,11 +698,11 @@ namespace MultiHit
                 var jsonStr = JsonConvert.SerializeObject(group);
                 var fileName = Path.Combine(d.FullName, group.name.Replace(' ', '_') + ".json");
                 File.WriteAllText(fileName, jsonStr);
-                log.Information($"Export 1 group into {path}.");
+                Log.Information($"Export 1 group into {path}.");
             }
             catch (Exception e)
             {
-                log.Error(e, $"An error has occurred while exporting to {path}.");
+                Log.Error(e, $"An error has occurred while exporting to {path}.");
             }
         }
         internal void ImportGroup(string filename)
@@ -740,11 +730,11 @@ namespace MultiHit
                 group.actionList = tempActionList;
                 Configuration.actionGroups.Add(group);
                 Configuration.Save();
-                log.Information($"Imported group {group.name}.");
+                Log.Information($"Imported group {group.name}.");
             }
             catch (Exception e)
             {
-                log.Error(e, $"An error has occurred while importing from {filename}.");
+                Log.Error(e, $"An error has occurred while importing from {filename}.");
             }
         }
 
@@ -828,7 +818,7 @@ namespace MultiHit
             ConfigWindow.Dispose();
             MainWindow.Dispose();
             
-            this.CommandManager.RemoveHandler(CommandName);
+            CommandManager.RemoveHandler(CommandName);
 
         }
 
@@ -858,17 +848,17 @@ namespace MultiHit
 
         private SeString GetActorName(uint id)
         {
-            return _objectTable.SearchById(id)?.Name ?? SeString.Empty;
+            return ObjectTable.SearchById(id)?.Name ?? SeString.Empty;
         }
         private uint GetActorIdx(uint id)
         {
             uint idx = 0;
-            using (IEnumerator<global::Dalamud.Game.ClientState.Objects.Types.GameObject> enumerator = _objectTable.GetEnumerator())
+            using (var enumerator = ObjectTable.GetEnumerator())
             {
                 while (enumerator.MoveNext())
                 {
-                    global::Dalamud.Game.ClientState.Objects.Types.GameObject current = enumerator.Current;
-                    if (!(current == null) && current.ObjectId == id)
+                    var current = enumerator.Current;
+                    if (!(current == null) && current.GameObjectId == id)
                     {
                         return idx;
                     }

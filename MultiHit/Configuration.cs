@@ -13,22 +13,15 @@ namespace MultiHit
         [NonSerialized]
         internal bool changed = false;
 
-        [NonSerialized]
-        private DalamudPluginInterface? PluginInterface;
 
         public bool Enabled = true;
         public List<ActionGroup> actionGroups = new();
         public bool validateActionGroups = true;
 
-        public void Initialize(DalamudPluginInterface pluginInterface)
-        {
-            this.PluginInterface = pluginInterface;
-        }
-
         public void Save()
         {
             this.changed = true;
-            this.PluginInterface!.SavePluginConfig(this);
+            Plugin.PluginInterface.SavePluginConfig(this);
         }
 
         public void ApplyChange()
