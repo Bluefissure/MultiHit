@@ -13,6 +13,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
 using ImPlotNET;
+using Lumina.Excel.GeneratedSheets;
 using Newtonsoft.Json;
 
 namespace MultiHit.Windows;
@@ -98,13 +99,27 @@ public class ConfigWindow : Window, IDisposable
             }
         }
         ImGui.SameLine();
-        var applyText = "Apply Changes";
-        ImGui.SetCursorPosX(ImGui.GetContentRegionMax().X - ImGui.CalcTextSize(applyText).X - 10);
-        if(Configuration.changed && ImGui.Button(applyText))
+        if(Configuration.changed)
         {
-            Plugin.validateActionGroups();
-            Plugin.updateAffectedAction();
-            Configuration.ApplyChange();
+            var applyText = "Apply Changes";
+            var nextPos = ImGui.GetContentRegionMax().X - ImGui.CalcTextSize(applyText).X - 20;
+            var validateText = "Validate Groups";
+            nextPos = nextPos - ImGui.CalcTextSize(validateText).X - 30;
+            ImGui.SetCursorPosX(nextPos);
+            if (ImGui.Checkbox(validateText, ref Configuration.validateActionGroups))
+            {
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Whether to validate the sum of action percentage does not exceed 100%%");
+            }
+            ImGui.SameLine();
+            if (ImGui.Button(applyText))
+            {
+                Plugin.validateActionGroups();
+                Plugin.updateAffectedAction();
+                Configuration.ApplyChange();
+            }
         }
         ImGui.Spacing();
         if (ImGui.BeginChild("#MultiHitGroup",
@@ -179,17 +194,17 @@ public class ConfigWindow : Window, IDisposable
                         }
                         ImGui.EndMenu();
                     }
-                    if (ImGui.Selectable("Enable Group"))
+                    if (ImGui.Selectable("Enable"))
                     {
                         group.enabled = true;
                         Configuration.Save();
                     }
-                    if (ImGui.Selectable("Disable Group"))
+                    if (ImGui.Selectable("Disable"))
                     {
                         group.enabled = false;
                         Configuration.Save();
                     }
-                    if (ImGui.BeginMenu("Edit Group Name"))
+                    if (ImGui.BeginMenu("Edit Name"))
                     {
                         var name = editGroupNameText == "" ? group.name : editGroupNameText;
                         if (ImGui.InputText("##EditGroupPopupNameEdit", ref name, 64))
@@ -208,7 +223,7 @@ public class ConfigWindow : Window, IDisposable
                         }
                         ImGui.EndMenu();
                     }
-                    if (ImGui.Selectable("Export Group"))
+                    if (ImGui.Selectable("Export"))
                     {
                         if (_dialogOpen)
                         {
@@ -227,12 +242,12 @@ public class ConfigWindow : Window, IDisposable
                             }, startDir);
                             _dialogOpen = true;
                         }
-                        PluginLog.Debug($"Exporting group#{groupIdx}");
+                        Plugin.log.Debug($"Exporting group#{groupIdx}");
                     }
-                    if (ImGui.Selectable("Delete Group"))
+                    if (ImGui.Selectable("Delete"))
                     {
                         groupToDeleteIdx = groupIdx;
-                        PluginLog.Debug($"To delete group#{groupIdx}");
+                        Plugin.log.Debug($"To delete group#{groupIdx}");
                     }
                     ImGui.EndPopup();
                 }
@@ -256,26 +271,26 @@ public class ConfigWindow : Window, IDisposable
                             }
                             if (ImGui.BeginPopupContextItem())
                             {
-                                if (ImGui.Selectable("Enable Action"))
+                                if (ImGui.Selectable("Enable"))
                                 {
                                     action.enabled = true;
                                     Configuration.Save();
                                 }
-                                if (ImGui.Selectable("Disable Action"))
+                                if (ImGui.Selectable("Disable"))
                                 {
                                     action.enabled = false;
                                     Configuration.Save();
                                 }
-                                if (ImGui.Selectable("Delete Action"))
+                                if (ImGui.Selectable("Delete"))
                                 {
                                     actionToDeleteIdx = actionIdx;
-                                    PluginLog.Debug($"To delete action {action}");
+                                    Plugin.log.Debug($"To delete action {action}");
                                 }
                                 ImGui.EndPopup();
                             }
                             if (actionOpen)
                             {
-                                PluginLog.Debug($"Selecting {action}");
+                                Plugin.log.Debug($"Selecting {action}");
                                 selectedGroupIdx = groupIdx;
                                 selectedActionIdx = actionIdx;
                             }
@@ -363,7 +378,6 @@ public class ConfigWindow : Window, IDisposable
         {
             ImGui.SetTooltip("Whether to show the Hit#i in flytext.");
         }
-        ImGui.SameLine();
         if (ImGui.Checkbox("Show Final", ref action.showFinal))
         {
             Configuration.Save();
@@ -374,7 +388,7 @@ public class ConfigWindow : Window, IDisposable
         }
         if (action.showFinal)
         {
-            int delay = (int)action.finalDelay;
+            int delay = (int)action.finalHit.time;
             ImGui.SameLine();
             ImGui.Text("Delay: ");
             if (ImGui.IsItemHovered())
@@ -387,12 +401,25 @@ public class ConfigWindow : Window, IDisposable
             {
                 delay = Math.Min(delay, 300);
                 delay = Math.Max(delay, 0);
-                action.finalDelay = delay;
+                action.finalHit.time = delay;
                 Configuration.Save();
             }
             if (ImGui.IsItemHovered())
             {
                 ImGui.SetTooltip("30 = 1 second");
+            }
+            ImGui.SameLine();
+            var uintCol = action.finalHit.color;
+            var R = uintCol >> 24;
+            var G = (uintCol >> 16) & 0xFF;
+            var B = (uintCol >> 8) & 0xFF;
+            var A = uintCol & 0xFF;
+            var col = new Vector4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+            if (ImGui.ColorEdit4($"ColorPicker##FinalColorPickerHit", ref col,
+                ImGuiColorEditFlags.NoLabel | ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.AlphaPreview | ImGuiColorEditFlags.AlphaBar))
+            {
+                action.finalHit.color = ((uint)(col.X * 255.0) << 24) | ((uint)(col.Y * 255.0) << 16) | ((uint)(col.Z * 255.0) << 8) | (uint)(col.W * 255.0);
+                Configuration.Save();
             }
         }
         if (ImGui.Checkbox("Custom Name", ref action.hasCustomName))

@@ -153,7 +153,6 @@ public struct ActionMultiHit
     public bool interruptible;
     public bool showHit = true;
     public bool showFinal = false;
-    public int finalDelay = 0;
     public bool hasCustomName = false;
     public string customName = "";
     public List<Hit> hitList;
@@ -165,7 +164,6 @@ public struct ActionMultiHit
         bool interruptible = true,
         bool showHit = true,
         bool showFinal = false,
-        int finalDelay = 0,
         bool hasCustomName = false,
         string customName = "",
         List<Hit>? hitList = null,
@@ -177,11 +175,10 @@ public struct ActionMultiHit
         this.interruptible = interruptible;
         this.showHit = showHit;
         this.showFinal = showFinal;
-        this.finalDelay = finalDelay;
         this.hasCustomName = hasCustomName;
         this.customName = customName;
         this.hitList = hitList ?? new();
-        this.finalHit = finalHit ?? new(30, 100);
+        this.finalHit = finalHit ?? new(1, 100);
     }
 
     public override string ToString() => $"{actionName}#{actionKey}";
