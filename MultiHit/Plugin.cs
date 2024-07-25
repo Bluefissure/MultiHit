@@ -665,6 +665,7 @@ namespace MultiHit
                 if (action == null)
                 {
                     log.Debug("action is null");
+                    _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
                 int animationId = (int)action.AnimationEnd.Row;
