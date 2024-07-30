@@ -434,21 +434,20 @@ namespace MultiHit
                                 int delay = 1000 * mulHit.time / 30;
                                 Task.Delay(delay).ContinueWith(_ =>
                                 {
-                                    lock (_ftLocks[actorIndex])
+                                    try
                                     {
-                                        try
+                                        if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
                                         {
-                                            if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
-                                            {
-                                                return;
-                                            }
+                                            return;
+                                        }
+                                        lock (_ftLocks[actorIndex])
+                                        {
                                             TryAddFlyText((FlyTextKind)kind, actorIndex, tempVal, val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
-                                            //_ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)tempVal, (uint)val2, shownActionName, tempText2, tempColor, (uint)icon, (uint)damageTypeIcon);
                                         }
-                                        catch (Exception e)
-                                        {
-                                            log.Error(e, "An error has occurred in MultiHit AddFlyText");
-                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        log.Error(e, "An error has occurred in MultiHit AddFlyText");
                                     }
                                 });
                             }
@@ -476,21 +475,21 @@ namespace MultiHit
                             }
                             Task.Delay(delay).ContinueWith(_ =>
                             {
-                                lock (_ftLocks[actorIndex])
+                                try
                                 {
-                                    try
+                                    if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
                                     {
-                                        if (text1 != _lastAnimationName && _interruptibleActionName.Contains(text1))
-                                        {
-                                            return;
-                                        }
+                                        return;
+                                    }
+                                    lock (_ftLocks[actorIndex])
+                                    {
                                         TryAddFlyText((FlyTextKind)kind, actorIndex, val1, val2, shownActionName, tempText2, (uint)tempColor, (uint)icon, (uint)damageTypeIcon);
                                         //_ftGui.AddFlyText((FlyTextKind)kind, actorIndex, (uint)val1, (uint)val2, shownActionName, tempText2, (uint)tempColor, (uint)icon, (uint)damageTypeIcon);
                                     }
-                                    catch (Exception e)
-                                    {
-                                        log.Error(e, "An error has occurred in MultiHit AddFlyText");
-                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    log.Error(e, "An error has occurred in MultiHit AddFlyText");
                                 }
                             });
                         }
