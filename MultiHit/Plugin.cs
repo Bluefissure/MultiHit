@@ -78,22 +78,6 @@ namespace MultiHit
             FlyTextKind.DamageCritDh
         };
 
-        /*
-        private delegate void AddScreenLogDelegate(
-                Character* target,
-                Character* source,
-                FlyTextKind logKind,
-                int option,
-                int actionKind,
-                int actionId,
-                int val1,
-                int val2,
-                int val3,
-                int val4
-            );
-        private readonly Hook<AddScreenLogDelegate> _addScreenLogHook;
-        */
-
         private delegate void AddFlyTextDelegate(
             IntPtr addonFlyText,
             uint actorIndex,
@@ -121,6 +105,8 @@ namespace MultiHit
         private readonly Hook<ReceiveActionEffectDelegate> _receiveActionEffectHook;
 
 
+        private delegate void CrashingFuncDelegate(nint a1, float a2);
+        private readonly Hook<CrashingFuncDelegate> _crashingFuncHook;
 
         public Plugin()
         {
@@ -156,16 +142,10 @@ namespace MultiHit
 
                 var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 56 57 41 54 41 55 41 56 48 8D AC 24 ?? ?? ?? ??");
                 _receiveActionEffectHook = Hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
-
-                /*
-                var addScreenLogPtr = scanner.ScanText("E8 ?? ?? ?? ?? BF ?? ?? ?? ?? 41 F6 87");
-                _addScreenLogHook = Hook<AddScreenLogDelegate>.FromAddress(addScreenLogPtr, AddScreenLogDetour);
-                var crashingTickPtr = scanner.ScanText("E8 ?? ?? ?? ?? 48 8B 45 28 48 8B CE");
-                _crashingTickHook = _hook.HookFromAddress<CrashingTick>(crashingTickPtr, CrashingTickDetour);
-                */
-
                 var addFlyTextAddress = Scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
                 _addFlyTextHook = Hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
+                var crashingFuncPtr = Scanner.ScanText("E8 ?? ?? ?? ?? F3 0F 58 B6 ?? ?? ?? ?? 0F 2F 35 ?? ?? ?? ?? ");
+                _crashingFuncHook = Hook.HookFromAddress<CrashingFuncDelegate>(crashingFuncPtr, CrashingFuncDetour);
 
 
                 _flyTextCreated = (OnFlyTextCreatedDelegate)FTGui.GetType().GetField("FlyTextCreated", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(FTGui);
@@ -176,12 +156,10 @@ namespace MultiHit
                 Log.Error(ex, $"An error occurred loading MultiHit Plugin.");
                 Log.Error("Plugin will not be loaded.");
 
-                // _addScreenLogHook?.Disable();
-                // _addScreenLogHook?.Dispose();
-                // _crashingTickHook?.Disable();
-                // _crashingTickHook?.Dispose();
                 _addFlyTextHook?.Disable();
                 _addFlyTextHook?.Dispose();
+                _crashingFuncHook?.Disable();
+                _crashingFuncHook?.Dispose();
                 _receiveActionEffectHook?.Disable();
                 _receiveActionEffectHook?.Dispose();
 
@@ -189,66 +167,71 @@ namespace MultiHit
             }
 
             _receiveActionEffectHook?.Enable();
-            // _addScreenLogHook.Enable();
-            // _crashingTickHook?.Enable();
             _addFlyTextHook?.Enable();
-            //_ftGui.FlyTextCreated += OnFlyTextCreated;
+            _crashingFuncHook?.Enable();
 
 
             PluginInterface.UiBuilder.Draw += DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         }
 
-        /*
-        private void CrashingTickDetour(nint a1, nint a2, nint a3, nint a4)
+        private bool validationCrashingFunc(nint a1, uint a3)
         {
             try
             {
-                _crashingTickHook.Original(a1, a2, a3, a4);
+                var v10 = 6 * a3;
+                nint v11 = Marshal.ReadIntPtr(a1, (int)(8 * v10 + 11064));
+                nint v12 = Marshal.ReadIntPtr(v11);
+                if (v11 == v12)
+                {
+                    return true;
+                }
+                int step = 0;
+                while (v11 != v12)
+                {
+                    nint v13 = v11 + 1;
+                    nint v11_1 = Marshal.ReadIntPtr(v11, IntPtr.Size);
+                    nint v14 = Marshal.ReadIntPtr(v11_1, 16);
+                    // Log.Debug($"step:{step} v11: {v11:X} v14:{v14:X}");
+                    if (v14 == IntPtr.Zero)
+                    {
+                        return false;
+                    }
+                    v11 = Marshal.ReadIntPtr(v11);
+                    step += 1;
+                }
             }
             catch (Exception e)
             {
-                _pluginLog.Error(e, "An error occurred in MultiHit CrashingTickDetour.");
+                Log.Error(e, "An error occurred in MultiHit crashing validator.");
+                return false;
             }
+            return true;
         }
-
-        private void AddScreenLogDetour(
-                Character* target,
-                Character* source,
-                FlyTextKind logKind,
-                int option,
-                int actionKind,
-                int actionId,
-                int val1,
-                int val2,
-                int serverAttackType,
-                int val4
-            )
+        private void CrashingFuncDetour(nint a1, float a2)
         {
-            try
+            /*
+            Log.Debug($"UnkownFunc: a1:{a1:X} a2:{a2}");
+            var p1 = Marshal.ReadIntPtr(a1, 11072);
+            var p2 = Marshal.ReadIntPtr(a1, 11120);
+            var p3 = Marshal.ReadIntPtr(a1, 11168);
+            Log.Debug($"p1:{p1:X} p2:{p2} p3:{p3}");
+            */
+            bool valid = true;
+            for (int i = 0; i < 0xA; i++)
             {
-                var targetId = target->GameObject.ObjectID;
-                var sourceId = source->GameObject.ObjectID;
-
-                DebugLog(ScreenLog, $"{option} {actionKind} {actionId}");
-                DebugLog(ScreenLog, $"{val1} {val2} {serverAttackType} {val4}");
-                var targetName = GetActorName(targetId);
-                var targetIdx = GetActorIdx(targetId);
-                var sourceName = GetActorName(sourceId);
-                var sourceIdx = GetActorIdx(sourceId);
-                DebugLog(ScreenLog, $"src {sourceId} {sourceName} {sourceIdx}");
-                DebugLog(ScreenLog, $"tgt {targetId} {targetName} {targetIdx}");
+                if(!validationCrashingFunc(a1, (uint)i))
+                {
+                    valid = false;
+                    break;
+                }
             }
-            catch (Exception e)
+            if (valid)
             {
-                _pluginLog.Error(e, "An error occurred in MultiHit.");
+                _crashingFuncHook.Original(a1, a2);
             }
-
-            _addScreenLogHook.Original(target, source, logKind, option, actionKind, actionId, val1, val2, serverAttackType, val4);
         }
-        */
 
-        [Obsolete]
         private void AddFlyTextDetour(
             IntPtr addonFlyText,
             uint actorIndex,
@@ -739,76 +722,11 @@ namespace MultiHit
             }
         }
 
-        /*
-        private void OnFlyTextCreated(
-                ref FlyTextKind kind,
-                ref int val1,
-                ref int val2,
-                ref SeString text1,
-                ref SeString text2,
-                ref uint color,
-                ref uint icon,
-                ref uint damageTypeIcon,
-                ref float yOffset,
-                ref bool handled
-            )
-        {
-            return;
-            try
-            {
-                var ftKind = kind;
-                var ftVal1 = val1;
-                var ftVal2 = val2;
-                var ftText1 = text1?.TextValue.Replace("%", "%%");
-                var ftText2 = text2?.TextValue.Replace("%", "%%");
-                var ftColor = color;
-                var ftIcon = icon;
-                var ftDamageTypeIcon = damageTypeIcon;
-
-                DebugLog(FlyText, $"flytext created: kind: {ftKind} ({(int)kind}), val1: {val1}, val2: {val2}, color: {color:X}, icon: {icon}, yOffset:{yOffset}");
-                DebugLog(FlyText, $"text1: {ftText1} | text2: {ftText2}");
-
-                if (!ftText1.StartsWith("[MultiHit]"))
-                {
-                    handled = true;
-                    Task.Delay(1000).ContinueWith(_ =>
-                    {
-                        try
-                        {
-                            lock(_ftLock)
-                            {
-                                uint targetIdx = 0;
-                                DebugLog(FlyText, $"targetIdx: {targetIdx}");
-                                _ftGui.AddFlyText(ftKind, targetIdx, (uint)ftVal1, (uint)ftVal2, "[MultiHit]" + ftText1, ftText2, ftColor, ftIcon, ftDamageTypeIcon);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            DebugLog(FlyText, $"text1: {ftText1} | text2: {ftText2}");
-                        }
-                    });
-                }
-                else
-                {
-                    text1 = ftText1.Replace("[MultiHit]", "");
-                }
-
-            }
-            catch (Exception e)
-            {
-                _pluginLog.Error(e, "An error has occurred in MultiHit");
-            }
-        }
-        */
 
         public void Dispose()
         {
-            //_ftGui.FlyTextCreated -= OnFlyTextCreated;
-
-            //_addScreenLogHook?.Disable();
-            //_addScreenLogHook?.Dispose();
-            // _crashingTickHook?.Disable();
-            // _crashingTickHook?.Dispose();
+            _crashingFuncHook?.Disable();
+            _crashingFuncHook?.Dispose();
             _addFlyTextHook?.Disable();
             _addFlyTextHook?.Dispose();
             _receiveActionEffectHook?.Disable();
