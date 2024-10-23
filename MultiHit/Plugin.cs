@@ -108,7 +108,6 @@ namespace MultiHit
 
 
         private delegate void CrashingFuncDelegate(nint a1, float a2);
-        private readonly Hook<CrashingFuncDelegate> _crashingFuncHook;
 
         public Plugin()
         {
@@ -160,8 +159,6 @@ namespace MultiHit
                 Framework.Update -= Framework_Update;
                 _addFlyTextHook?.Disable();
                 _addFlyTextHook?.Dispose();
-                _crashingFuncHook?.Disable();
-                _crashingFuncHook?.Dispose();
                 _receiveActionEffectHook?.Disable();
                 _receiveActionEffectHook?.Dispose();
 
@@ -170,7 +167,6 @@ namespace MultiHit
 
             _receiveActionEffectHook?.Enable();
             _addFlyTextHook?.Enable();
-            _crashingFuncHook?.Enable();
 
 
             PluginInterface.UiBuilder.Draw += DrawUI;
