@@ -6,10 +6,7 @@
 
 **Split the flytext of action damage into multiple.**
 
-Install by adding 3rd party repo:
-- CN: `https://raw.githubusercontent.com/Bluefissure/MultiHit/CN/repo.json`
-- CN (Mirror): `https://dalamud_cn_3rd.otters.cloud/plugins/MultiHit`
-- Intl: `https://raw.githubusercontent.com/Bluefissure/MultiHit/master/repo.json`
+Install by installing from Dalamud's plugin manager (after enabling testing exclusive in settings).
 
 Open config window by `/mhit`.
 
