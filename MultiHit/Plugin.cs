@@ -374,14 +374,14 @@ namespace MultiHit
                                 });
                             }
                         }
-                        if (multiHitList == null || _finalHitMap.ContainsKey(text1))
+                        if (multiHitList == null || _finalHitMap.ContainsKey(actionName))
                         {
                             var tempText2 = text2;
                             if (tempText2 == null || tempText2.Equals(string.Empty))
                             {
                                 tempText2 = "\0";
                             }
-                            _finalHitMap.TryGetValue(text1, out var finalHit);
+                            _finalHitMap.TryGetValue(actionName, out var finalHit);
                             int finalDelay = finalHit.time;
                             int delay = 1000 * (maxTime + finalDelay) / 30;
                             uint tempColor = finalHit.color;
