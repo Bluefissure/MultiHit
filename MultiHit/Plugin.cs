@@ -8,10 +8,8 @@ using Dalamud.Hooking;
 using System;
 using Action = Lumina.Excel.GeneratedSheets.Action;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
-using Dalamud.Logging;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Text;
@@ -25,7 +23,6 @@ using System.Reflection;
 using Dalamud.Plugin.Services;
 using static Dalamud.Plugin.Services.IFlyTextGui;
 using System.Collections.Concurrent;
-using FFXIVClientStructs.FFXIV.Client.System.Framework;
 
 namespace MultiHit
 {
