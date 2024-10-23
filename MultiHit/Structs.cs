@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Dalamud.Game.Gui.FlyText;
+using Dalamud.Game.Text.SeStringHandling;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.GeneratedSheets;
 
@@ -196,5 +197,30 @@ public struct ActionGroup
         this.name = name;
         this.enabled = enabled;
         this.actionList = actionList ?? new();
+    }
+}
+
+public struct FlyTextParam
+{
+    public FlyTextKind kind;
+    public uint actorIndex;
+    public uint val1;
+    public uint val2;
+    public SeString text1;
+    public SeString text2;
+    public uint color;
+    public uint icon;
+    public uint damageIcon;
+    public FlyTextParam(FlyTextKind kind, uint actorIndex, uint val1, uint val2, SeString text1, SeString text2, uint color, uint icon, uint damageIcon)
+    {
+        this.kind = kind;
+        this.actorIndex = actorIndex;
+        this.val1 = val1;
+        this.val2 = val2;
+        this.text1 = text1;
+        this.text2 = text2;
+        this.color = color;
+        this.icon = icon;
+        this.damageIcon = damageIcon;
     }
 }
