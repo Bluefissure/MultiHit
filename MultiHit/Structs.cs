@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.GeneratedSheets;
 
 namespace MultiHit;
 

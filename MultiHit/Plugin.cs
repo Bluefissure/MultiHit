@@ -6,7 +6,7 @@ using MultiHit.Windows;
 using Dalamud.Game;
 using Dalamud.Hooking;
 using System;
-using Action = Lumina.Excel.GeneratedSheets.Action;
+using Action = Lumina.Excel.Sheets.Action;
 using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
@@ -515,12 +515,12 @@ namespace MultiHit
             {
                 foreach (var mulHit in actionList.Where(a => a.enabled))
                 {
-                    var action = actionDict.GetValueOrDefault((uint)mulHit.actionKey);
+                    Nullable<Action> action = actionDict.GetValueOrDefault((uint)mulHit.actionKey);
                     if (action == null)
                     {
                         continue;
                     }
-                    string actionName = action.Name;
+                    string actionName = action.Value.Name.ToString();
                     if (!validActionName.Contains(actionName))
                     {
                         validActionName.Add(actionName);
@@ -539,13 +539,13 @@ namespace MultiHit
                     }
                     if (mulHit.showFinal && !finalHitMap.ContainsKey(actionName))
                     {
-                        finalHitMap[action.Name] = mulHit.finalHit;
+                        finalHitMap[actionName] = mulHit.finalHit;
                     }
                     if (mulHit.hasCustomName && !hasCustomActionName.Contains(actionName))
                     {
                         hasCustomActionName.Add(actionName);
-                        customName[action.Name] = mulHit.customName;
-                        customNameRev[mulHit.customName] = action.Name;
+                        customName[actionName] = mulHit.customName;
+                        customNameRev[mulHit.customName] = actionName;
                     }
                     multiHitMap[actionName] = mulHit.hitList;
                 }
@@ -581,17 +581,17 @@ namespace MultiHit
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
-                var action = actionDict.GetValueOrDefault(effectHeader->ActionId);
+                Nullable<Action> action = actionDict.GetValueOrDefault(effectHeader->ActionId);
                 if (action == null)
                 {
                     Log.Debug("action is null");
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
                     return;
                 }
-                int animationId = (int)action.AnimationEnd.Row;
+                int animationId = (int)action.Value.AnimationEnd.RowId;
                 if(animationId != -1)
                 {
-                    _lastAnimationName = action.Name;
+                    _lastAnimationName = action.Value.Name.ToString();
                 }
                 Log.Debug($"--- source actor: {sourceCharacter->GameObject.EntityId}, action id {effectHeader->ActionId}, anim id {effectHeader->AnimationId} numTargets: {effectHeader->TargetCount} animationId:{animationId} ---");
             }
@@ -650,12 +650,12 @@ namespace MultiHit
                 for (var i = 0; i < group.actionList.Count; i ++)
                 {
                     var act = group.actionList[i];
-                    var action = actionDict.GetValueOrDefault((uint)act.actionKey);
+                    Nullable<Action> action = actionDict.GetValueOrDefault((uint)act.actionKey);
                     if (action == null)
                     {
                         continue;
                     }
-                    act.actionName = action.Name.ToString();
+                    act.actionName = action.Value.Name.ToString();
                     tempActionList.Add(act);
                 }
                 group.actionList = tempActionList;

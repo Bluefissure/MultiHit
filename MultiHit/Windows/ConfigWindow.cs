@@ -1,20 +1,13 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Xml.Linq;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using ImGuiNET;
-using ImPlotNET;
-using Lumina.Excel.GeneratedSheets;
-using Newtonsoft.Json;
 
 namespace MultiHit.Windows;
 
@@ -179,9 +172,9 @@ public class ConfigWindow : Window, IDisposable
                                 act.Name.ToString().Contains(addActionFilterText)
                                 || act.RowId.ToString().Contains(addActionFilterText)))
                             {
-                                if (ImGui.Selectable(action.Name + $"##Action{action.RowId}"))
+                                if (ImGui.Selectable(action.Name.ToString() + $"##Action{action.RowId}"))
                                 {
-                                    group.actionList.Add(new ActionMultiHit((int)action.RowId, action.Name));
+                                    group.actionList.Add(new ActionMultiHit((int)action.RowId, action.Name.ToString()));
                                     Configuration.Save();
                                     ImGui.CloseCurrentPopup();
                                 }
