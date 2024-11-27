@@ -169,8 +169,8 @@ public class ConfigWindow : Window, IDisposable
                             ))
                         {
                             foreach (var action in Plugin.actionList.Where(act =>
-                                act.Name.ToString().Contains(addActionFilterText)
-                                || act.RowId.ToString().Contains(addActionFilterText)))
+                                act.Name.ToString().ToLower().Contains(addActionFilterText.ToLower())
+                                || act.RowId.ToString().ToLower().Contains(addActionFilterText.ToLower())))
                             {
                                 if (ImGui.Selectable(action.Name.ToString() + $"##Action{action.RowId}"))
                                 {
