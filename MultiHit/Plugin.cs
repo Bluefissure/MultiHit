@@ -23,6 +23,7 @@ using System.Reflection;
 using Dalamud.Plugin.Services;
 using static Dalamud.Plugin.Services.IFlyTextGui;
 using System.Collections.Concurrent;
+using static FFXIVClientStructs.FFXIV.Client.Game.Group.GroupManager.Delegates;
 
 namespace MultiHit
 {
@@ -693,8 +694,37 @@ namespace MultiHit
 
         private void OnCommand(string command, string args)
         {
-            //MainWindow.IsOpen = true;
-            ConfigWindow.IsOpen = true;
+            foreach (string keyword in new List<string>{ "enable", "disable" })
+            {
+                if (args.ToLower().StartsWith(keyword))
+                {
+                    if (args.ToLower().Trim() == keyword)
+                    {
+                        Log.Info("{0} multihit", keyword);
+                        Configuration.Enabled = (keyword == "enable");
+                    }
+                    else
+                    {
+                        var groupName = args.ToLower().Substring(keyword.Length).Trim();
+                        var actionGroups = CollectionsMarshal.AsSpan(Configuration.actionGroups);
+                        for (int i = 0; i < actionGroups.Length; i++)
+                        {
+                            ref var actGroup = ref actionGroups[i];
+                            if (actGroup.name.ToLower() == groupName)
+                            {
+                                Log.Info("{0} action group {1}", keyword, actGroup.name);
+                                actGroup.enabled = (keyword == "enable");
+                            }
+                        }
+                    }
+                    Configuration.Save();
+                    Configuration.ApplyChange();
+                    return;
+                }
+            }
+            ConfigWindow.IsOpen = !ConfigWindow.IsOpen;
+            Configuration.Save();
+            Configuration.ApplyChange();
         }
 
         private void DrawUI()
