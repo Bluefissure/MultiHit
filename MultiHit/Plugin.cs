@@ -142,7 +142,7 @@ namespace MultiHit
 
                 this.updateAffectedAction();
 
-                var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 56 57 41 54 41 55 41 56 48 8D AC 24 ?? ?? ?? ??");
+                var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 53 56 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 70");
                 _receiveActionEffectHook = Hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
                 var addFlyTextAddress = Scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
                 _addFlyTextHook = Hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
