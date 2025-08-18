@@ -7,7 +7,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace MultiHit.Windows;
 
@@ -157,7 +157,7 @@ public class ConfigWindow : Window, IDisposable
                 {
                     ImGui.PopStyleColor();
                 }
-                if (ImGui.BeginPopupContextItem())
+                if (ImGui.BeginPopupContextItem($"NewActionPopup##Group{groupIdx}"))
                 {
                     if (ImGui.BeginMenu("Add new action"))
                     {
@@ -262,7 +262,7 @@ public class ConfigWindow : Window, IDisposable
                             {
                                 ImGui.PopStyleColor();
                             }
-                            if (ImGui.BeginPopupContextItem())
+                            if (ImGui.BeginPopupContextItem($"OperationPopup##Group{groupIdx}action{actionIdx}"))
                             {
                                 if (ImGui.Selectable("Enable"))
                                 {

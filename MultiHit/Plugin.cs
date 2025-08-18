@@ -1,29 +1,31 @@
-using Dalamud.Game.Command;
-using Dalamud.IoC;
-using Dalamud.Plugin;
-using Dalamud.Interface.Windowing;
-using MultiHit.Windows;
 using Dalamud.Game;
-using Dalamud.Hooking;
-using System;
-using Action = Lumina.Excel.Sheets.Action;
-using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
+using Dalamud.Game.Command;
 using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text.SeStringHandling;
-using System.Collections.Generic;
-using FFXIVClientStructs.FFXIV.Client.UI;
-using System.Text;
-using Lumina.Excel;
-using System.Linq;
-using Newtonsoft.Json;
-using System.IO;
-using System.Runtime.InteropServices;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using System.Reflection;
+using Dalamud.Hooking;
+using Dalamud.Interface.Windowing;
+using Dalamud.IoC;
+using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using static Dalamud.Plugin.Services.IFlyTextGui;
+using Dalamud.Utility;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel;
+using MultiHit.Windows;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using static Dalamud.Plugin.Services.IFlyTextGui;
 using static FFXIVClientStructs.FFXIV.Client.Game.Group.GroupManager.Delegates;
+using Action = Lumina.Excel.Sheets.Action;
+using Character = FFXIVClientStructs.FFXIV.Client.Game.Character.Character;
 
 namespace MultiHit
 {
@@ -142,7 +144,7 @@ namespace MultiHit
 
                 this.updateAffectedAction();
 
-                var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 53 56 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 70");
+                var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24");
                 _receiveActionEffectHook = Hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
                 var addFlyTextAddress = Scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
                 _addFlyTextHook = Hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
@@ -222,20 +224,13 @@ namespace MultiHit
             }
             try
             {
-                // Known valid flytext region within the atk arrays
-                // actual index
-                var strIndex = 27;
-                var numIndex = 30;
-                // dalamud's call
-                // var strIndex = 25;
-                // var numIndex = 28;
-                var atkArrayDataHolder = ((UIModule*)GameGui.GetUIModule())->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
+                var atkArrayDataHolder = ((UIModule*)GameGui.GetUIModule().Address)->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
                 Log.Debug($"addonFlyText: {addonFlyText:X} actorIndex:{actorIndex} offsetNum: {offsetNum} offsetNumMax: {offsetNumMax} offsetStr: {offsetStr} offsetStrMax: {offsetStrMax} unknown:{unknown}");
                 try
                 {
-                    var strArray = atkArrayDataHolder._StringArrays[strIndex];
+                    var strArray = AtkStage.Instance()->GetStringArrayData(StringArrayType.FlyText);
                     var flyText1Ptr = strArray->StringArray[offsetStr];
-                    if (flyText1Ptr == null || (nint)flyText1Ptr == IntPtr.Zero)
+                    if (flyText1Ptr == null)
                     {
                         _addFlyTextHook.Original(
                             addonFlyText,
@@ -250,16 +245,16 @@ namespace MultiHit
                             unknown);
                         return;
                     }
-                    var numArray = atkArrayDataHolder._NumberArrays[numIndex];
+                    var numArray = AtkStage.Instance()->GetNumberArrayData(NumberArrayType.FlyText);
                     var kind = numArray->IntArray[offsetNum + 1];
                     var val1 = numArray->IntArray[offsetNum + 2];
                     var val2 = numArray->IntArray[offsetNum + 3];
                     int damageTypeIcon = numArray->IntArray[offsetNum + 4];
                     int color = numArray->IntArray[offsetNum + 6];
                     int icon = numArray->IntArray[offsetNum + 7];
-                    var text1 = Marshal.PtrToStringUTF8((nint)flyText1Ptr);
+                    var text1 = flyText1Ptr.ToString();
                     var flyText2Ptr = strArray->StringArray[offsetStr + 1];
-                    var text2 = Marshal.PtrToStringUTF8((nint)flyText2Ptr);
+                    var text2 = flyText2Ptr.ToString();
                     Log.Debug($"text1:{text1} text2:{text2}");
                     if (text1 == null || text2 == null)
                     {
@@ -279,7 +274,7 @@ namespace MultiHit
                     if (text1.EndsWith(SpecialChar) && text1.Length >= 1)
                     {
                         var bytes = Encoding.UTF8.GetBytes(text1.Substring(0, text1.Length - 1));
-                        Marshal.WriteByte((nint)flyText1Ptr + bytes.Length, 0);
+                         Marshal.WriteByte((nint)flyText1Ptr.Value + bytes.Length, 0);
                         _addFlyTextHook.Original(
                             addonFlyText,
                             actorIndex,
