@@ -2,7 +2,6 @@ using System;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
-using ImGuiScene;
 
 namespace MultiHit.Windows;
 
