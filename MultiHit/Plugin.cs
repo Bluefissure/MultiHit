@@ -144,7 +144,7 @@ namespace MultiHit
 
                 this.updateAffectedAction();
 
-                var receiveActionEffectFuncPtr = Scanner.ScanText("40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24");
+                var receiveActionEffectFuncPtr = Scanner.ScanText("E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 33 CC E8 ?? ?? ?? ?? 48 81 C4 00 05 00 00");
                 _receiveActionEffectHook = Hook.HookFromAddress<ReceiveActionEffectDelegate>(receiveActionEffectFuncPtr, ReceiveActionEffect);
                 var addFlyTextAddress = Scanner.ScanText("E8 ?? ?? ?? ?? FF C7 41 D1 C7");
                 _addFlyTextHook = Hook.HookFromAddress<AddFlyTextDelegate>(addFlyTextAddress, AddFlyTextDetour);
@@ -230,7 +230,7 @@ namespace MultiHit
                 {
                     var strArray = AtkStage.Instance()->GetStringArrayData(StringArrayType.FlyText);
                     var flyText1Ptr = strArray->StringArray[offsetStr];
-                    if (flyText1Ptr == null)
+                    if (flyText1Ptr.Value == null)
                     {
                         _addFlyTextHook.Original(
                             addonFlyText,
@@ -571,7 +571,7 @@ namespace MultiHit
                     return;
                 }
                 var oID = sourceCharacter->GameObject.EntityId;
-                if(ClientState.LocalPlayer == null || oID != ClientState.LocalPlayer.GameObjectId)
+                if(ObjectTable.LocalPlayer == null || oID != ObjectTable.LocalPlayer?.GameObjectId)
                 {
                     Log.Debug($"--- source actor: {sourceCharacter->GameObject.EntityId} is not self, skipping");
                     _receiveActionEffectHook.Original(sourceId, sourceCharacter, pos, effectHeader, effectArray, effectTail);
